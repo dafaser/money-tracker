@@ -10,6 +10,7 @@ import {
   doc, 
   setDoc,
   getDoc,
+  increment,
   Timestamp,
   orderBy,
   limit
@@ -454,7 +455,7 @@ export default function App() {
         
         if (balanceChange !== 0) {
           await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { 
-            balance: account.balance + balanceChange,
+            balance: increment(balanceChange),
             updatedAt: new Date().toISOString()
           });
         }
@@ -465,7 +466,7 @@ export default function App() {
 
         if (valueChange !== 0) {
           await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { 
-            value: investment.value + valueChange,
+            value: increment(valueChange),
             updatedAt: new Date().toISOString()
           });
         }
@@ -476,7 +477,7 @@ export default function App() {
 
         if (amountChange !== 0) {
           await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { 
-            amount: liability.amount + amountChange,
+            amount: increment(amountChange),
             updatedAt: new Date().toISOString()
           });
         }
