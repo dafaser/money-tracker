@@ -44,3 +44,13 @@ export interface UserProfile {
   photoURL: string;
   createdAt: string;
 }
+
+export interface Information {
+  id: string;
+  userId: string;
+  type: 'bank' | 'ewallet';
+  provider: string;
+  accountNumber: string;
+  accountName: string;
+  updatedAt: string;
+}

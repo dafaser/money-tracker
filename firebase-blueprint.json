@@ -69,6 +69,21 @@
         "notes": { "type": "string" }
       },
       "required": ["userId", "date", "amount", "type"]
+    },
+    "Information": {
+      "title": "Information",
+      "description": "Bank account or e-wallet information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["bank", "ewallet"] },
+        "provider": { "type": "string", "description": "Bank name or E-wallet name" },
+        "accountNumber": { "type": "string", "description": "Account number or Phone number" },
+        "accountName": { "type": "string", "description": "Name on account" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "provider", "accountNumber"]
     }
   },
   "firestore": {
@@ -76,6 +91,7 @@
     "/users/{userId}/accounts/{accountId}": { "schema": "Account", "description": "User cash accounts" },
     "/users/{userId}/investments/{investmentId}": { "schema": "Investment", "description": "User investments" },
     "/users/{userId}/liabilities/{liabilityId}": { "schema": "Liability", "description": "User liabilities" },
-    "/users/{userId}/transactions/{transactionId}": { "schema": "Transaction", "description": "User transactions" }
+    "/users/{userId}/transactions/{transactionId}": { "schema": "Transaction", "description": "User transactions" },
+    "/users/{userId}/information/{infoId}": { "schema": "Information", "description": "User bank/ewallet info" }
   }
 }

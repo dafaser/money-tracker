@@ -17,7 +17,7 @@ import {
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, signInWithGoogle, signInWithApple, logout } from './firebase';
-import { Account, Investment, Liability, Transaction, UserProfile } from './types';
+import { Account, Investment, Liability, Transaction, UserProfile, Information } from './types';
 import { formatCurrency, cn } from './utils';
 import { 
   Wallet, 
@@ -33,7 +33,11 @@ import {
   BarChart3,
   History,
   X,
-  AlertCircle
+  AlertCircle,
+  Copy,
+  Check,
+  LayoutDashboard,
+  Info
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -211,6 +215,26 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
   </AnimatePresence>
 );
 
+const CopyButton = ({ text }: { text: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button 
+      onClick={handleCopy}
+      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2] transition-all"
+      title="Copy to clipboard"
+    >
+      {copied ? <Check size={16} className="text-[#00e5c2]" /> : <Copy size={16} />}
+    </button>
+  );
+};
+
 // --- Main App ---
 
 export default function App() {
@@ -220,12 +244,17 @@ export default function App() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [information, setInformation] = useState<Information[]>([]);
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'information'>('dashboard');
 
   // Modals
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [isLiabilityModalOpen, setIsLiabilityModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isInformationModalOpen, setIsInformationModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
@@ -278,11 +307,16 @@ export default function App() {
       setTransactions(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
     });
 
+    const unsubInformation = onSnapshot(collection(db, `users/${user.uid}/information`), (s) => {
+      setInformation(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Information)));
+    });
+
     return () => {
       unsubAccounts();
       unsubInvestments();
       unsubLiabilities();
       unsubTransactions();
+      unsubInformation();
     };
   }, [user]);
 
@@ -366,6 +400,37 @@ export default function App() {
       });
     }
     setIsLiabilityModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const handleAddInformation = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) return;
+    const formData = new FormData(e.currentTarget);
+    const type = formData.get('type') as 'bank' | 'ewallet';
+    const provider = formData.get('provider') as string;
+    const accountNumber = formData.get('accountNumber') as string;
+    const accountName = formData.get('accountName') as string;
+
+    if (editingItem) {
+      await updateDoc(doc(db, `users/${user.uid}/information`, editingItem.id), { 
+        type, 
+        provider, 
+        accountNumber, 
+        accountName, 
+        updatedAt: new Date().toISOString() 
+      });
+    } else {
+      await addDoc(collection(db, `users/${user.uid}/information`), {
+        userId: user.uid,
+        type,
+        provider,
+        accountNumber,
+        accountName,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    setIsInformationModalOpen(false);
     setEditingItem(null);
   };
 
@@ -727,6 +792,31 @@ export default function App() {
               <TrendingUp size={24} className="text-[#0f1115]" />
             </div>
             <span className="text-xl font-bold tracking-tight">LuxWealth</span>
+            
+            <nav className="ml-4 flex items-center gap-1 bg-[#1a1d23] p-1 rounded-xl border border-[#2a2e36]">
+              <button 
+                onClick={() => setActiveTab('dashboard')}
+                className={cn(
+                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
+                  activeTab === 'dashboard' 
+                    ? "bg-[#00e5c2] text-[#0f1115]" 
+                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
+                )}
+              >
+                <LayoutDashboard size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Dashboard</span>
+              </button>
+              <button 
+                onClick={() => setActiveTab('information')}
+                className={cn(
+                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
+                  activeTab === 'information' 
+                    ? "bg-[#00e5c2] text-[#0f1115]" 
+                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
+                )}
+              >
+                <Info size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Information</span>
+              </button>
+            </nav>
           </div>
           
           <div className="flex items-center gap-4">
@@ -743,8 +833,10 @@ export default function App() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* Summary Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {activeTab === 'dashboard' ? (
+          <>
+            {/* Summary Section */}
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
               <Wallet size={48} />
@@ -1173,6 +1265,81 @@ export default function App() {
             {transactions.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No transactions yet</p>}
           </div>
         </Card>
+        </>
+        ) : (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-[#e6e8eb]">Banking & E-Wallet Information</h2>
+                <p className="text-[#e6e8eb]/40">Manage your account numbers and phone numbers for easy access</p>
+              </div>
+              <Button onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}>
+                <Plus size={18} /> Add Information
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {information.map((info) => (
+                <Card key={info.id} className="relative group hover:border-[#00e5c2]/30 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-3 rounded-xl",
+                        info.type === 'bank' ? "bg-blue-500/10 text-blue-500" : "bg-[#00e5c2]/10 text-[#00e5c2]"
+                      )}>
+                        {info.type === 'bank' ? <Wallet size={24} /> : <TrendingUp size={24} />}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg">{info.provider}</h4>
+                        <p className="text-xs text-[#e6e8eb]/40 uppercase tracking-widest">{info.type}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setEditingItem(info); setIsInformationModalOpen(true); }}
+                        className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => deleteDoc(doc(db, `users/${user.uid}/information`, info.id))}
+                        className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="bg-[#0f1115] p-4 rounded-xl border border-[#2a2e36] relative group/item">
+                      <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Number / Phone</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xl font-mono font-medium tracking-wider">{info.accountNumber}</span>
+                        <CopyButton text={info.accountNumber} />
+                      </div>
+                    </div>
+
+                    {info.accountName && (
+                      <div>
+                        <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Name</p>
+                        <p className="text-sm font-medium">{info.accountName}</p>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+              {information.length === 0 && (
+                <div className="col-span-full py-20 text-center">
+                  <div className="w-20 h-20 bg-[#1a1d23] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#2a2e36]">
+                    <Info size={32} className="text-[#e6e8eb]/20" />
+                  </div>
+                  <h3 className="text-lg font-bold text-[#e6e8eb]/60">No information stored</h3>
+                  <p className="text-sm text-[#e6e8eb]/40">Add your bank accounts or e-wallets to get started</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Modals */}
@@ -1330,6 +1497,38 @@ export default function App() {
             <input name="notes" defaultValue={editingItem?.notes} placeholder="Optional notes" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
           </div>
           <Button className="w-full py-4 mt-4">{editingItem ? "Update Transaction" : "Record Transaction"}</Button>
+        </form>
+      </Modal>
+
+      <Modal 
+        isOpen={isInformationModalOpen} 
+        onClose={() => { 
+          setIsInformationModalOpen(false); 
+          setEditingItem(null);
+        }} 
+        title={editingItem ? "Edit Information" : "Add Information"}
+      >
+        <form onSubmit={handleAddInformation} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Type</label>
+            <select name="type" defaultValue={editingItem?.type || 'bank'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
+              <option value="bank">Bank Account</option>
+              <option value="ewallet">E-Wallet</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Provider Name</label>
+            <input name="provider" defaultValue={editingItem?.provider} required placeholder="e.g. BCA, Mandiri, GoPay, OVO" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Number / Phone</label>
+            <input name="accountNumber" defaultValue={editingItem?.accountNumber} required placeholder="e.g. 1234567890" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Name</label>
+            <input name="accountName" defaultValue={editingItem?.accountName} placeholder="e.g. John Doe" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+          </div>
+          <Button className="w-full py-4 mt-4">Save Information</Button>
         </form>
       </Modal>
 
