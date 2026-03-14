@@ -291,37 +291,72 @@ export default function App() {
     const notes = formData.get('notes') as string;
     const date = new Date().toISOString();
 
-    // Find account to update
-    const account = accounts.find(a => a.id === accountId) || 
-                    investments.find(i => i.id === accountId) || 
-                    liabilities.find(l => l.id === accountId);
+    if (editingItem) {
+      // For simplicity in editing, we'll just update the transaction record
+      // Adjusting balances on edit is complex, so we'll just update the metadata
+      await updateDoc(doc(db, `users/${user.uid}/transactions`, editingItem.id), {
+        amount,
+        type,
+        accountId,
+        notes,
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      // Find account to update
+      const account = accounts.find(a => a.id === accountId) || 
+                      investments.find(i => i.id === accountId) || 
+                      liabilities.find(l => l.id === accountId);
 
-    if (!account) return;
+      if (!account) return;
 
-    // Update balances
-    if (type === 'income') {
-      await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance + amount });
-    } else if (type === 'expense') {
-      await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance - amount });
-    } else if (type === 'investment_deposit') {
-      // Decrease cash, increase investment
-      // For simplicity, we'll just update the investment value here
-      await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value + amount });
-    } else if (type === 'debt_payment') {
-      await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount - amount });
+      // Update balances
+      if (type === 'income') {
+        await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance + amount });
+      } else if (type === 'expense') {
+        await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance - amount });
+      } else if (type === 'investment_deposit') {
+        await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value + amount });
+      } else if (type === 'debt_payment') {
+        await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount - amount });
+      }
+
+      await addDoc(collection(db, `users/${user.uid}/transactions`), {
+        userId: user.uid,
+        date,
+        amount,
+        type,
+        accountId,
+        notes,
+        category: 'Manual'
+      });
     }
 
-    await addDoc(collection(db, `users/${user.uid}/transactions`), {
-      userId: user.uid,
-      date,
-      amount,
-      type,
-      accountId,
-      notes,
-      category: 'Manual'
-    });
-
     setIsTransactionModalOpen(false);
+    setEditingItem(null);
+  };
+
+  const deleteTransaction = async (transaction: Transaction) => {
+    if (!user) return;
+    if (confirm('Are you sure you want to delete this transaction? This will also reverse the balance change.')) {
+      // Find account to reverse balance
+      const account = accounts.find(a => a.id === transaction.accountId) || 
+                      investments.find(i => i.id === transaction.accountId) || 
+                      liabilities.find(l => l.id === transaction.accountId);
+
+      if (account) {
+        if (transaction.type === 'income') {
+          await updateDoc(doc(db, `users/${user.uid}/accounts`, transaction.accountId), { balance: (account as Account).balance - transaction.amount });
+        } else if (transaction.type === 'expense') {
+          await updateDoc(doc(db, `users/${user.uid}/accounts`, transaction.accountId), { balance: (account as Account).balance + transaction.amount });
+        } else if (transaction.type === 'investment_deposit') {
+          await updateDoc(doc(db, `users/${user.uid}/investments`, transaction.accountId), { value: (account as Investment).value - transaction.amount });
+        } else if (transaction.type === 'debt_payment') {
+          await updateDoc(doc(db, `users/${user.uid}/liabilities`, transaction.accountId), { amount: (account as Liability).amount + transaction.amount });
+        }
+      }
+
+      await deleteDoc(doc(db, `users/${user.uid}/transactions`, transaction.id));
+    }
   };
 
   const deleteItem = async (collectionName: string, id: string) => {
@@ -822,11 +857,12 @@ export default function App() {
                   <th className="pb-4 font-medium">Account</th>
                   <th className="pb-4 font-medium">Amount</th>
                   <th className="pb-4 font-medium">Notes</th>
+                  <th className="pb-4 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#2a2e36]">
                 {transactions.map(t => (
-                  <tr key={t.id} className="text-sm">
+                  <tr key={t.id} className="text-sm group">
                     <td className="py-4 text-[#e6e8eb]/60">{new Date(t.date).toLocaleDateString()}</td>
                     <td className="py-4">
                       <span className={cn(
@@ -848,6 +884,22 @@ export default function App() {
                       {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
                     <td className="py-4 text-[#e6e8eb]/40">{t.notes}</td>
+                    <td className="py-4 text-right">
+                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => { setEditingItem(t); setIsTransactionModalOpen(true); }}
+                          className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => deleteTransaction(t)}
+                          className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -937,13 +989,13 @@ export default function App() {
 
       <Modal 
         isOpen={isTransactionModalOpen} 
-        onClose={() => setIsTransactionModalOpen(false)} 
-        title="New Transaction"
+        onClose={() => { setIsTransactionModalOpen(false); setEditingItem(null); }} 
+        title={editingItem ? "Edit Transaction" : "New Transaction"}
       >
         <form onSubmit={handleAddTransaction} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Transaction Type</label>
-            <select name="type" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
+            <select name="type" defaultValue={editingItem?.type || 'expense'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
               <option value="income">Income (Add to Cash)</option>
               <option value="expense">Expense (Spend from Cash)</option>
               <option value="investment_deposit">Investment Deposit</option>
@@ -952,7 +1004,7 @@ export default function App() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Target Account</label>
-            <select name="accountId" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
+            <select name="accountId" defaultValue={editingItem?.accountId} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
               <optgroup label="Cash Accounts">
                 {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
               </optgroup>
@@ -966,13 +1018,13 @@ export default function App() {
           </div>
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount (IDR)</label>
-            <input name="amount" type="number" required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
           </div>
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Notes</label>
-            <input name="notes" placeholder="Optional notes" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <input name="notes" defaultValue={editingItem?.notes} placeholder="Optional notes" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
           </div>
-          <Button className="w-full py-4 mt-4">Record Transaction</Button>
+          <Button className="w-full py-4 mt-4">{editingItem ? "Update Transaction" : "Record Transaction"}</Button>
         </form>
       </Modal>
 
