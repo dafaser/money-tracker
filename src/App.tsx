@@ -542,7 +542,7 @@ export default function App() {
     const sampleInvestments = [
       { name: 'Gold', value: 500000, category: 'Gold' },
       { name: 'Mutual Funds', value: 500000, category: 'Mutual Funds' },
-      { name: 'Superbank', value: 1000000, category: 'Digital Bank' }
+      { name: 'Superbank', value: 1000000, category: 'Bank Interest' }
     ];
 
     const sampleLiabilities = [
@@ -1223,7 +1223,10 @@ export default function App() {
               <option>Gold</option>
               <option>Stocks</option>
               <option>Mutual Funds</option>
-              <option>Digital Bank</option>
+              <option>Bank Interest</option>
+              <option>Deposito</option>
+              <option>Crypto</option>
+              <option>Valas</option>
               <option>Others</option>
             </select>
           </div>
