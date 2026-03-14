@@ -350,6 +350,21 @@ export default function App() {
     }
   };
 
+  const handleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+      } else if (error.code === 'auth/popup-blocked') {
+        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+      } else {
+        alert("Gagal login: " + error.message);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
@@ -371,7 +386,7 @@ export default function App() {
           </div>
           <h1 className="text-4xl font-black text-[#e6e8eb] mb-4 tracking-tight">LuxWealth</h1>
           <p className="text-[#e6e8eb]/60 mb-12 text-lg">Your elite personal finance dashboard.</p>
-          <Button onClick={signInWithGoogle} className="w-full py-4 text-lg rounded-2xl shadow-lg shadow-[#00e5c2]/20">
+          <Button onClick={handleLogin} className="w-full py-4 text-lg rounded-2xl shadow-lg shadow-[#00e5c2]/20">
             Sign in with Google
           </Button>
         </motion.div>
