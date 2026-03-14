@@ -23,7 +23,7 @@ export interface Liability {
   updatedAt: string;
 }
 
-export type TransactionType = 'income' | 'expense' | 'debt_payment' | 'investment_deposit';
+export type TransactionType = 'income' | 'expense' | 'debt_payment' | 'investment_deposit' | 'investment_withdrawal' | 'debt_expense';
 
 export interface Transaction {
   id: string;

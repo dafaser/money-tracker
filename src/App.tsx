@@ -138,6 +138,8 @@ export default function App() {
 
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [selectedTransactionType, setSelectedTransactionType] = useState('expense');
+  const [selectedAccountId, setSelectedAccountId] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -203,18 +205,6 @@ export default function App() {
   ];
 
   const totalAssets = totalCash + totalInvestments + totalDebt;
-
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-    return (
-      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-[10px] font-bold">
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
 
   const handleAddAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -284,55 +274,72 @@ export default function App() {
   const handleAddTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
+    
+    const type = selectedTransactionType;
+    const accountId = selectedAccountId;
     const formData = new FormData(e.currentTarget);
-    const type = formData.get('type') as any;
     const amount = Number(formData.get('amount'));
-    const accountId = formData.get('accountId') as string;
     const notes = formData.get('notes') as string;
-    const date = new Date().toISOString();
+    const date = editingItem ? editingItem.date : new Date().toISOString();
 
-    if (editingItem) {
-      // For simplicity in editing, we'll just update the transaction record
-      // Adjusting balances on edit is complex, so we'll just update the metadata
-      await updateDoc(doc(db, `users/${user.uid}/transactions`, editingItem.id), {
-        amount,
-        type,
-        accountId,
-        notes,
-        updatedAt: new Date().toISOString()
-      });
-    } else {
-      // Find account to update
-      const account = accounts.find(a => a.id === accountId) || 
-                      investments.find(i => i.id === accountId) || 
-                      liabilities.find(l => l.id === accountId);
-
-      if (!account) return;
-
-      // Update balances
-      if (type === 'income') {
-        await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance + amount });
-      } else if (type === 'expense') {
-        await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance - amount });
-      } else if (type === 'investment_deposit') {
-        await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value + amount });
-      } else if (type === 'debt_payment') {
-        await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount - amount });
-      }
-
-      await addDoc(collection(db, `users/${user.uid}/transactions`), {
-        userId: user.uid,
-        date,
-        amount,
-        type,
-        accountId,
-        notes,
-        category: 'Manual'
-      });
+    if (!accountId) {
+      alert('Please select a target account. If the list is empty, add an account first.');
+      return;
     }
 
-    setIsTransactionModalOpen(false);
-    setEditingItem(null);
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/transactions`, editingItem.id), {
+          amount,
+          type,
+          accountId,
+          notes,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Find account to update
+        const account = accounts.find(a => a.id === accountId) || 
+                        investments.find(i => i.id === accountId) || 
+                        liabilities.find(l => l.id === accountId);
+
+        if (!account) {
+          alert('Selected account not found.');
+          return;
+        }
+
+        // Update balances
+        if (type === 'income') {
+          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance + amount });
+        } else if (type === 'expense') {
+          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance - amount });
+        } else if (type === 'investment_deposit') {
+          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value + amount });
+        } else if (type === 'investment_withdrawal') {
+          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value - amount });
+        } else if (type === 'debt_payment') {
+          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount - amount });
+        } else if (type === 'debt_expense') {
+          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount + amount });
+        }
+
+        await addDoc(collection(db, `users/${user.uid}/transactions`), {
+          userId: user.uid,
+          date,
+          amount,
+          type,
+          accountId,
+          notes,
+          category: 'Manual'
+        });
+      }
+
+      setIsTransactionModalOpen(false);
+      setEditingItem(null);
+      setSelectedAccountId('');
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+      alert("Failed to save transaction. Please try again.");
+    }
   };
 
   const deleteTransaction = async (transaction: Transaction) => {
@@ -350,8 +357,12 @@ export default function App() {
           await updateDoc(doc(db, `users/${user.uid}/accounts`, transaction.accountId), { balance: (account as Account).balance + transaction.amount });
         } else if (transaction.type === 'investment_deposit') {
           await updateDoc(doc(db, `users/${user.uid}/investments`, transaction.accountId), { value: (account as Investment).value - transaction.amount });
+        } else if (transaction.type === 'investment_withdrawal') {
+          await updateDoc(doc(db, `users/${user.uid}/investments`, transaction.accountId), { value: (account as Investment).value + transaction.amount });
         } else if (transaction.type === 'debt_payment') {
           await updateDoc(doc(db, `users/${user.uid}/liabilities`, transaction.accountId), { amount: (account as Liability).amount + transaction.amount });
+        } else if (transaction.type === 'debt_expense') {
+          await updateDoc(doc(db, `users/${user.uid}/liabilities`, transaction.accountId), { amount: (account as Liability).amount - transaction.amount });
         }
       }
 
@@ -629,38 +640,80 @@ export default function App() {
 
         {/* Charts Section */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2">
+          <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <BarChart3 size={20} className="text-[#00e5c2]" />
-                <h3 className="font-bold text-lg">Asset Overview</h3>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-[#00e5c2]/10 rounded-lg">
+                  <BarChart3 size={20} className="text-[#00e5c2]" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-[#e6e8eb]">Asset Overview</h3>
+                  <p className="text-xs text-[#e6e8eb]/40">Distribution of your liquid and growth assets</p>
+                </div>
               </div>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[320px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={[
-                    { name: 'Cash', value: totalCash, color: '#00e5c2' },
-                    { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
-                    { name: 'Debt', value: totalDebt, color: '#f87171' },
+                    { name: 'Cash', value: totalCash, color: '#00e5c2', secondaryColor: '#00b398' },
+                    { name: 'Investments', value: totalInvestments, color: '#8b5cf6', secondaryColor: '#6d28d9' },
+                    { name: 'Debt', value: totalDebt, color: '#f87171', secondaryColor: '#dc2626' },
                   ]}
-                  margin={{ top: 30, right: 30, left: 20, bottom: 5 }}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
                 >
-                  <XAxis dataKey="name" stroke="#e6e8eb" opacity={0.4} axisLine={false} tickLine={false} />
+                  <defs>
+                    <linearGradient id="barGradientCash" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00e5c2" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#00e5c2" stopOpacity={0.2}/>
+                    </linearGradient>
+                    <linearGradient id="barGradientInv" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.2}/>
+                    </linearGradient>
+                    <linearGradient id="barGradientDebt" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f87171" stopOpacity={0.8}/>
+                      <stop offset="100%" stopColor="#f87171" stopOpacity={0.2}/>
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#e6e8eb" 
+                    opacity={0.3} 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fontSize: 12, fontWeight: 500 }}
+                    dy={10}
+                  />
                   <YAxis hide />
                   <Tooltip 
-                    cursor={{ fill: 'transparent' }}
-                    contentStyle={{ backgroundColor: '#1a1d23', border: '1px solid #2a2e36', borderRadius: '12px' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Amount']}
+                    cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 12 }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
+                            <p className="text-xs font-bold text-[#e6e8eb]/40 uppercase tracking-widest mb-1">{payload[0].payload.name}</p>
+                            <p className="text-lg font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60} label={{ position: 'top', formatter: (val: number) => formatCurrency(val), fill: '#e6e8eb', fontSize: 10, fontWeight: 'bold', offset: 10 }}>
+                  <Bar 
+                    dataKey="value" 
+                    radius={[12, 12, 4, 4]} 
+                    barSize={60}
+                    animationDuration={1500}
+                  >
                     {
                       [
-                        { name: 'Cash', value: totalCash, color: '#00e5c2' },
-                        { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
-                        { name: 'Debt', value: totalDebt, color: '#f87171' },
+                        { name: 'Cash', gradient: 'url(#barGradientCash)' },
+                        { name: 'Investments', gradient: 'url(#barGradientInv)' },
+                        { name: 'Debt', gradient: 'url(#barGradientDebt)' },
                       ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell key={`cell-${index}`} fill={entry.gradient} />
                       ))
                     }
                   </Bar>
@@ -669,34 +722,76 @@ export default function App() {
             </div>
           </Card>
 
-          <Card>
-            <div className="flex items-center gap-2 mb-8">
-              <PieChartIcon size={20} className="text-[#00e5c2]" />
-              <h3 className="font-bold text-lg">Allocation</h3>
+          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
+            <div className="flex items-center gap-3 mb-8">
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <PieChartIcon size={20} className="text-purple-400" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-[#e6e8eb]">Allocation</h3>
+                <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
+              </div>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[280px] w-full relative">
+              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-[0.2em]">Total</p>
+                <p className="text-xl font-black text-[#e6e8eb]">{formatCurrency(totalCash + totalInvestments)}</p>
+              </div>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
+                  <defs>
+                    {assetAllocationData.map((entry, index) => (
+                      <linearGradient key={`grad-${index}`} id={`pieGrad-${index}`} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
+                        <stop offset="100%" stopColor={entry.color} stopOpacity={0.6}/>
+                      </linearGradient>
+                    ))}
+                  </defs>
                   <Pie
                     data={assetAllocationData}
-                    innerRadius={60}
-                    outerRadius={90}
-                    paddingAngle={5}
+                    innerRadius={75}
+                    outerRadius={100}
+                    paddingAngle={8}
                     dataKey="value"
-                    labelLine={false}
-                    label={renderCustomizedLabel}
+                    stroke="none"
+                    animationBegin={0}
+                    animationDuration={1800}
                   >
                     {assetAllocationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={`url(#pieGrad-${index})`}
+                        style={{ filter: `drop-shadow(0 0 8px ${entry.color}44)` }}
+                      />
                     ))}
                   </Pie>
                   <Tooltip 
-                    contentStyle={{ backgroundColor: '#1a1d23', border: '1px solid #2a2e36', borderRadius: '12px' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Value']}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-3 rounded-xl shadow-2xl backdrop-blur-xl">
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.color }} />
+                              <p className="text-[10px] font-bold text-[#e6e8eb]/40 uppercase tracking-widest">{payload[0].name}</p>
+                            </div>
+                            <p className="text-sm font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
                   />
-                  <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
               </ResponsiveContainer>
+            </div>
+            <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
+              {assetAllocationData.slice(0, 4).map((item, idx) => (
+                <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/5">
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-medium text-[#e6e8eb]/60 truncate">{item.name}</span>
+                </div>
+              ))}
             </div>
           </Card>
         </section>
@@ -840,7 +935,7 @@ export default function App() {
                 </Button>
               )}
               <Button 
-                onClick={() => setIsTransactionModalOpen(true)} 
+                onClick={() => { setIsTransactionModalOpen(true); setSelectedTransactionType('expense'); }} 
                 variant="primary" 
                 className="bg-white text-black hover:bg-gray-200 py-1.5 px-3 text-xs rounded-lg"
               >
@@ -869,8 +964,11 @@ export default function App() {
                         "px-2 py-1 rounded-md text-[10px] font-bold uppercase",
                         t.type === 'income' ? "bg-green-500/10 text-green-500" :
                         t.type === 'expense' ? "bg-red-500/10 text-red-500" :
+                        t.type === 'investment_deposit' ? "bg-purple-500/10 text-purple-500" :
+                        t.type === 'investment_withdrawal' ? "bg-orange-500/10 text-orange-500" :
                         t.type === 'debt_payment' ? "bg-blue-500/10 text-blue-500" :
-                        "bg-purple-500/10 text-purple-500"
+                        t.type === 'debt_expense' ? "bg-red-500/10 text-red-500" :
+                        "bg-gray-500/10 text-gray-500"
                       )}>
                         {t.type.replace('_', ' ')}
                       </span>
@@ -880,14 +978,22 @@ export default function App() {
                        investments.find(i => i.id === t.accountId)?.name || 
                        liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
                     </td>
-                    <td className={cn("py-4 font-bold", t.type === 'income' ? "text-green-500" : "text-[#e6e8eb]")}>
-                      {t.type === 'income' ? '+' : '-'}{formatCurrency(t.amount)}
+                    <td className={cn(
+                      "py-4 font-bold", 
+                      (t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? "text-green-500" : "text-red-500"
+                    )}>
+                      {(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
                     <td className="py-4 text-[#e6e8eb]/40">{t.notes}</td>
                     <td className="py-4 text-right">
                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button 
-                          onClick={() => { setEditingItem(t); setIsTransactionModalOpen(true); }}
+                          onClick={() => { 
+                            setEditingItem(t); 
+                            setSelectedTransactionType(t.type);
+                            setSelectedAccountId(t.accountId);
+                            setIsTransactionModalOpen(true); 
+                          }}
                           className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
                         >
                           <Edit2 size={14} />
@@ -989,32 +1095,68 @@ export default function App() {
 
       <Modal 
         isOpen={isTransactionModalOpen} 
-        onClose={() => { setIsTransactionModalOpen(false); setEditingItem(null); }} 
+        onClose={() => { 
+          setIsTransactionModalOpen(false); 
+          setEditingItem(null);
+          setSelectedAccountId('');
+        }} 
         title={editingItem ? "Edit Transaction" : "New Transaction"}
       >
         <form onSubmit={handleAddTransaction} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Transaction Type</label>
-            <select name="type" defaultValue={editingItem?.type || 'expense'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
+            <select 
+              name="type" 
+              value={selectedTransactionType}
+              onChange={(e) => {
+                setSelectedTransactionType(e.target.value);
+                setSelectedAccountId(''); // Reset account when type changes
+              }}
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+            >
               <option value="income">Income (Add to Cash)</option>
               <option value="expense">Expense (Spend from Cash)</option>
               <option value="investment_deposit">Investment Deposit</option>
-              <option value="debt_payment">Debt Payment</option>
+              <option value="investment_withdrawal">Investment Withdrawal</option>
+              <option value="debt_payment">Debt Payment (Reduce Debt)</option>
+              <option value="debt_expense">Debt Expense (Increase Debt)</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Target Account</label>
-            <select name="accountId" defaultValue={editingItem?.accountId} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
-              <optgroup label="Cash Accounts">
-                {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-              </optgroup>
-              <optgroup label="Investments">
-                {investments.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
-              </optgroup>
-              <optgroup label="Liabilities">
-                {liabilities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </optgroup>
+            <select 
+              name="accountId" 
+              value={selectedAccountId}
+              onChange={(e) => setSelectedAccountId(e.target.value)}
+              required
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+            >
+              <option value="" disabled>Select an account</option>
+              {(selectedTransactionType === 'income' || selectedTransactionType === 'expense') && (
+                <optgroup label="Cash Accounts">
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </optgroup>
+              )}
+              {(selectedTransactionType === 'investment_deposit' || selectedTransactionType === 'investment_withdrawal') && (
+                <optgroup label="Investments">
+                  {investments.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </optgroup>
+              )}
+              {(selectedTransactionType === 'debt_payment' || selectedTransactionType === 'debt_expense') && (
+                <optgroup label="Liabilities">
+                  {liabilities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </optgroup>
+              )}
             </select>
+            {((selectedTransactionType === 'income' || selectedTransactionType === 'expense') && accounts.length === 0) && (
+              <p className="text-xs text-red-400 mt-1">No cash accounts found. Please add one first.</p>
+            )}
+            {((selectedTransactionType === 'investment_deposit' || selectedTransactionType === 'investment_withdrawal') && investments.length === 0) && (
+              <p className="text-xs text-red-400 mt-1">No investments found. Please add one first.</p>
+            )}
+            {((selectedTransactionType === 'debt_payment' || selectedTransactionType === 'debt_expense') && liabilities.length === 0) && (
+              <p className="text-xs text-red-400 mt-1">No liabilities found. Please add one first.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount (IDR)</label>
