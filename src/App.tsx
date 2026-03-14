@@ -666,27 +666,6 @@ export default function App() {
           </Card>
         </section>
 
-        {/* Action Bar */}
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }}>
-            <Plus size={18} /> Add Asset
-          </Button>
-          <Button onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} variant="secondary">
-            <Plus size={18} /> Add Investment
-          </Button>
-          <Button onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} variant="secondary">
-            <Plus size={18} /> Add Debt
-          </Button>
-          <Button onClick={() => setIsTransactionModalOpen(true)} variant="primary" className="ml-auto bg-white text-black hover:bg-gray-200">
-            <History size={18} /> New Transaction
-          </Button>
-          {accounts.length === 0 && (
-            <Button onClick={seedData} variant="ghost" className="text-xs opacity-50">
-              Load Sample Data
-            </Button>
-          )}
-        </div>
-
         {/* Data Tables */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Cash Accounts */}
@@ -695,6 +674,12 @@ export default function App() {
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <Wallet size={18} className="text-[#00e5c2]" /> Cash Accounts
               </h3>
+              <Button 
+                onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
+                className="py-1.5 px-3 text-xs rounded-lg"
+              >
+                <Plus size={14} /> Add
+              </Button>
             </div>
             <div className="space-y-4">
               {accounts.map(account => (
@@ -729,6 +714,13 @@ export default function App() {
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <TrendingUp size={18} className="text-purple-400" /> Investments
               </h3>
+              <Button 
+                onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
+                variant="secondary"
+                className="py-1.5 px-3 text-xs rounded-lg"
+              >
+                <Plus size={14} /> Add
+              </Button>
             </div>
             <div className="space-y-4">
               {investments.map(inv => (
@@ -764,6 +756,13 @@ export default function App() {
               <h3 className="font-bold text-lg flex items-center gap-2">
                 <CreditCard size={18} className="text-red-400" /> Liabilities
               </h3>
+              <Button 
+                onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
+                variant="secondary"
+                className="py-1.5 px-3 text-xs rounded-lg"
+              >
+                <Plus size={14} /> Add
+              </Button>
             </div>
             <div className="space-y-4">
               {liabilities.map(debt => (
@@ -799,6 +798,20 @@ export default function App() {
             <h3 className="font-bold text-lg flex items-center gap-2">
               <History size={18} className="text-[#00e5c2]" /> Recent Transactions
             </h3>
+            <div className="flex items-center gap-3">
+              {accounts.length === 0 && (
+                <Button onClick={seedData} variant="ghost" className="text-xs opacity-50">
+                  Load Sample Data
+                </Button>
+              )}
+              <Button 
+                onClick={() => setIsTransactionModalOpen(true)} 
+                variant="primary" 
+                className="bg-white text-black hover:bg-gray-200 py-1.5 px-3 text-xs rounded-lg"
+              >
+                <History size={14} /> New Transaction
+              </Button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left">
