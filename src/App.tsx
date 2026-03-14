@@ -199,9 +199,22 @@ export default function App() {
   const assetAllocationData = [
     { name: 'Cash', value: totalCash, color: '#00e5c2' },
     { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
+    { name: 'Debt', value: totalDebt, color: '#f87171' },
   ];
 
-  const debtData = liabilities.map(l => ({ name: l.name, value: l.amount }));
+  const totalAssets = totalCash + totalInvestments + totalDebt;
+
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+
+    return (
+      <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-[10px] font-bold">
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 
   const handleAddAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -590,18 +603,32 @@ export default function App() {
             </div>
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={[
-                  { name: 'Cash', value: totalCash },
-                  { name: 'Investments', value: totalInvestments },
-                  { name: 'Debt', value: totalDebt },
-                ]}>
+                <BarChart 
+                  data={[
+                    { name: 'Cash', value: totalCash, color: '#00e5c2' },
+                    { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
+                    { name: 'Debt', value: totalDebt, color: '#f87171' },
+                  ]}
+                  margin={{ top: 30, right: 30, left: 20, bottom: 5 }}
+                >
                   <XAxis dataKey="name" stroke="#e6e8eb" opacity={0.4} axisLine={false} tickLine={false} />
                   <YAxis hide />
                   <Tooltip 
+                    cursor={{ fill: 'transparent' }}
                     contentStyle={{ backgroundColor: '#1a1d23', border: '1px solid #2a2e36', borderRadius: '12px' }}
-                    itemStyle={{ color: '#00e5c2' }}
+                    formatter={(value: number) => [formatCurrency(value), 'Amount']}
                   />
-                  <Bar dataKey="value" fill="#00e5c2" radius={[8, 8, 0, 0]} barSize={60} />
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60} label={{ position: 'top', formatter: (val: number) => formatCurrency(val), fill: '#e6e8eb', fontSize: 10, fontWeight: 'bold', offset: 10 }}>
+                    {
+                      [
+                        { name: 'Cash', value: totalCash, color: '#00e5c2' },
+                        { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
+                        { name: 'Debt', value: totalDebt, color: '#f87171' },
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))
+                    }
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -618,9 +645,11 @@ export default function App() {
                   <Pie
                     data={assetAllocationData}
                     innerRadius={60}
-                    outerRadius={80}
+                    outerRadius={90}
                     paddingAngle={5}
                     dataKey="value"
+                    labelLine={false}
+                    label={renderCustomizedLabel}
                   >
                     {assetAllocationData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
@@ -628,6 +657,7 @@ export default function App() {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ backgroundColor: '#1a1d23', border: '1px solid #2a2e36', borderRadius: '12px' }}
+                    formatter={(value: number) => [formatCurrency(value), 'Value']}
                   />
                   <Legend verticalAlign="bottom" height={36}/>
                 </PieChart>
