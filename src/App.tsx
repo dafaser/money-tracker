@@ -31,7 +31,8 @@ import {
   PieChart as PieChartIcon,
   BarChart3,
   History,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -46,6 +47,94 @@ import {
   Legend 
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
+
+// --- Types ---
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+const handleFirestoreError = (error: unknown, operationType: OperationType, path: string | null) => {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+};
+
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      let message = "Something went wrong.";
+      try {
+        const parsed = JSON.parse(this.state.error.message);
+        if (parsed.error) message = `Database Error: ${parsed.error}`;
+      } catch (e) {
+        message = this.state.error.message || message;
+      }
+
+      return (
+        <div className="min-h-screen bg-[#0f1115] flex items-center justify-center p-4">
+          <div className="bg-[#1a1d23] border border-red-500/20 p-8 rounded-2xl max-w-md w-full text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold mb-2">Application Error</h2>
+            <p className="text-[#e6e8eb]/60 mb-6">{message}</p>
+            <Button onClick={() => window.location.reload()} className="w-full">Reload Application</Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // --- Components ---
 
@@ -135,6 +224,9 @@ export default function App() {
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [isLiabilityModalOpen, setIsLiabilityModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [deleteCollection, setDeleteCollection] = useState<string>('');
 
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -280,57 +372,61 @@ export default function App() {
     const formData = new FormData(e.currentTarget);
     const amount = Number(formData.get('amount'));
     const notes = formData.get('notes') as string;
-    const date = editingItem ? editingItem.date : new Date().toISOString();
+    const date = editingItem ? (editingItem as Transaction).date : new Date().toISOString();
 
     if (!accountId) {
       alert('Please select a target account. If the list is empty, add an account first.');
       return;
     }
 
+    // Determine account type
+    const isAccount = accounts.some(a => a.id === accountId);
+    const isInvestment = investments.some(i => i.id === accountId);
+    const isLiability = liabilities.some(l => l.id === accountId);
+    const accountType = isAccount ? 'cash' : isInvestment ? 'investment' : 'liability';
+
     try {
       if (editingItem) {
-        await updateDoc(doc(db, `users/${user.uid}/transactions`, editingItem.id), {
-          amount,
-          type,
-          accountId,
-          notes,
-          updatedAt: new Date().toISOString()
-        });
+        const oldTx = editingItem as Transaction;
+        const path = `users/${user.uid}/transactions/${oldTx.id}`;
+        
+        // Reverse old balance impact
+        await updateAccountBalance(oldTx.accountId, oldTx.type, oldTx.amount, true);
+        
+        // Apply new balance impact
+        await updateAccountBalance(accountId, type, amount, false);
+
+        try {
+          await updateDoc(doc(db, `users/${user.uid}/transactions`, oldTx.id), {
+            amount,
+            type,
+            accountId,
+            accountType,
+            notes,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.UPDATE, path);
+        }
       } else {
-        // Find account to update
-        const account = accounts.find(a => a.id === accountId) || 
-                        investments.find(i => i.id === accountId) || 
-                        liabilities.find(l => l.id === accountId);
+        // Apply balance impact
+        await updateAccountBalance(accountId, type, amount, false);
 
-        if (!account) {
-          alert('Selected account not found.');
-          return;
+        const transPath = `users/${user.uid}/transactions`;
+        try {
+          await addDoc(collection(db, transPath), {
+            userId: user.uid,
+            date,
+            amount,
+            type,
+            accountId,
+            accountType,
+            notes,
+            category: 'Manual'
+          });
+        } catch (err) {
+          handleFirestoreError(err, OperationType.CREATE, transPath);
         }
-
-        // Update balances
-        if (type === 'income') {
-          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance + amount });
-        } else if (type === 'expense') {
-          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { balance: (account as Account).balance - amount });
-        } else if (type === 'investment_deposit') {
-          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value + amount });
-        } else if (type === 'investment_withdrawal') {
-          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { value: (account as Investment).value - amount });
-        } else if (type === 'debt_payment') {
-          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount - amount });
-        } else if (type === 'debt_expense') {
-          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { amount: (account as Liability).amount + amount });
-        }
-
-        await addDoc(collection(db, `users/${user.uid}/transactions`), {
-          userId: user.uid,
-          date,
-          amount,
-          type,
-          accountId,
-          notes,
-          category: 'Manual'
-        });
       }
 
       setIsTransactionModalOpen(false);
@@ -338,42 +434,92 @@ export default function App() {
       setSelectedAccountId('');
     } catch (error) {
       console.error("Error saving transaction:", error);
-      alert("Failed to save transaction. Please try again.");
+    }
+  };
+
+  const updateAccountBalance = async (accountId: string, type: string, amount: number, isReverse: boolean = false) => {
+    if (!user) return;
+    
+    const account = accounts.find(a => a.id === accountId);
+    const investment = investments.find(i => i.id === accountId);
+    const liability = liabilities.find(l => l.id === accountId);
+
+    let multiplier = isReverse ? -1 : 1;
+
+    try {
+      if (account) {
+        let balanceChange = 0;
+        if (type === 'income') balanceChange = amount * multiplier;
+        if (type === 'expense') balanceChange = -amount * multiplier;
+        
+        if (balanceChange !== 0) {
+          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { 
+            balance: account.balance + balanceChange,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else if (investment) {
+        let valueChange = 0;
+        if (type === 'investment_deposit') valueChange = amount * multiplier;
+        if (type === 'investment_withdrawal') valueChange = -amount * multiplier;
+
+        if (valueChange !== 0) {
+          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { 
+            value: investment.value + valueChange,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      } else if (liability) {
+        let amountChange = 0;
+        if (type === 'debt_payment') amountChange = -amount * multiplier;
+        if (type === 'debt_expense') amountChange = amount * multiplier;
+
+        if (amountChange !== 0) {
+          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { 
+            amount: liability.amount + amountChange,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error updating balance:", err);
     }
   };
 
   const deleteTransaction = async (transaction: Transaction) => {
     if (!user) return;
-    if (confirm('Are you sure you want to delete this transaction? This will also reverse the balance change.')) {
-      // Find account to reverse balance
-      const account = accounts.find(a => a.id === transaction.accountId) || 
-                      investments.find(i => i.id === transaction.accountId) || 
-                      liabilities.find(l => l.id === transaction.accountId);
-
-      if (account) {
-        if (transaction.type === 'income') {
-          await updateDoc(doc(db, `users/${user.uid}/accounts`, transaction.accountId), { balance: (account as Account).balance - transaction.amount });
-        } else if (transaction.type === 'expense') {
-          await updateDoc(doc(db, `users/${user.uid}/accounts`, transaction.accountId), { balance: (account as Account).balance + transaction.amount });
-        } else if (transaction.type === 'investment_deposit') {
-          await updateDoc(doc(db, `users/${user.uid}/investments`, transaction.accountId), { value: (account as Investment).value - transaction.amount });
-        } else if (transaction.type === 'investment_withdrawal') {
-          await updateDoc(doc(db, `users/${user.uid}/investments`, transaction.accountId), { value: (account as Investment).value + transaction.amount });
-        } else if (transaction.type === 'debt_payment') {
-          await updateDoc(doc(db, `users/${user.uid}/liabilities`, transaction.accountId), { amount: (account as Liability).amount + transaction.amount });
-        } else if (transaction.type === 'debt_expense') {
-          await updateDoc(doc(db, `users/${user.uid}/liabilities`, transaction.accountId), { amount: (account as Liability).amount - transaction.amount });
-        }
-      }
-
-      await deleteDoc(doc(db, `users/${user.uid}/transactions`, transaction.id));
-    }
+    setItemToDelete(transaction);
+    setDeleteCollection('transactions');
+    setIsDeleteConfirmOpen(true);
   };
 
   const deleteItem = async (collectionName: string, id: string) => {
     if (!user) return;
-    if (confirm('Are you sure you want to delete this item?')) {
-      await deleteDoc(doc(db, `users/${user.uid}/${collectionName}`, id));
+    setItemToDelete({ id });
+    setDeleteCollection(collectionName);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!user || !itemToDelete) return;
+
+    try {
+      if (deleteCollection === 'transactions') {
+        const tx = itemToDelete as Transaction;
+        // Reverse balance impact
+        await updateAccountBalance(tx.accountId, tx.type, tx.amount, true);
+        // Delete transaction
+        await deleteDoc(doc(db, `users/${user.uid}/transactions`, tx.id));
+      } else {
+        await deleteDoc(doc(db, `users/${user.uid}/${deleteCollection}`, itemToDelete.id));
+      }
+      
+      setIsDeleteConfirmOpen(false);
+      setItemToDelete(null);
+      setDeleteCollection('');
+    } catch (err) {
+      console.error("Error deleting item:", err);
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/${deleteCollection}/${itemToDelete.id}`);
     }
   };
 
@@ -565,7 +711,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0f1115] text-[#e6e8eb] font-sans selection:bg-[#00e5c2]/30">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-[#0f1115] text-[#e6e8eb] font-sans selection:bg-[#00e5c2]/30">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-xl border-b border-[#2a2e36]">
         <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
@@ -818,16 +965,16 @@ export default function App() {
                     <p className="font-medium">{account.name}</p>
                     <p className="text-lg font-bold text-[#00e5c2]">{formatCurrency(account.balance)}</p>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button 
                       onClick={() => deleteItem('accounts', account.id)}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -860,16 +1007,16 @@ export default function App() {
                     <p className="text-xs text-[#e6e8eb]/40">{inv.category}</p>
                     <p className="text-lg font-bold text-purple-400">{formatCurrency(inv.value)}</p>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-purple-400"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-purple-400 transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button 
                       onClick={() => deleteItem('investments', inv.id)}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -901,16 +1048,16 @@ export default function App() {
                     <p className="font-medium">{debt.name}</p>
                     <p className="text-lg font-bold text-red-400">{formatCurrency(debt.amount)}</p>
                   </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex gap-2">
                     <button 
                       onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button 
                       onClick={() => deleteItem('liabilities', debt.id)}
-                      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -980,13 +1127,13 @@ export default function App() {
                     </td>
                     <td className={cn(
                       "py-4 font-bold", 
-                      (t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? "text-green-500" : "text-red-500"
+                      (t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? "text-green-500" : "text-red-500"
                     )}>
                       {(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? '+' : '-'}{formatCurrency(t.amount)}
                     </td>
                     <td className="py-4 text-[#e6e8eb]/40">{t.notes}</td>
                     <td className="py-4 text-right">
-                      <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex justify-end gap-2">
                         <button 
                           onClick={() => { 
                             setEditingItem(t); 
@@ -994,15 +1141,17 @@ export default function App() {
                             setSelectedAccountId(t.accountId);
                             setIsTransactionModalOpen(true); 
                           }}
-                          className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
+                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
+                          title="Edit"
                         >
-                          <Edit2 size={14} />
+                          <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => deleteTransaction(t)}
-                          className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
+                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
+                          title="Delete"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -1170,9 +1319,36 @@ export default function App() {
         </form>
       </Modal>
 
+      <Modal 
+        isOpen={isDeleteConfirmOpen} 
+        onClose={() => {
+          setIsDeleteConfirmOpen(false);
+          setItemToDelete(null);
+          setDeleteCollection('');
+        }} 
+        title="Confirm Deletion"
+      >
+        <div className="space-y-6">
+          <p className="text-[#e6e8eb]/60">
+            {deleteCollection === 'transactions' 
+              ? "Are you sure you want to delete this transaction? This action will also automatically reverse the balance change on the associated account."
+              : "Are you sure you want to delete this item? This action cannot be undone."}
+          </p>
+          <div className="flex gap-3">
+            <Button onClick={() => setIsDeleteConfirmOpen(false)} variant="secondary" className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={confirmDelete} variant="danger" className="flex-1">
+              Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <footer className="max-w-7xl mx-auto px-4 py-12 text-center text-[#e6e8eb]/20 text-sm">
         <p>&copy; 2026 LuxWealth Tracker. All rights reserved.</p>
       </footer>
     </div>
+    </ErrorBoundary>
   );
 }

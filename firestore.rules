@@ -65,10 +65,10 @@ service cloud.firestore {
     }
 
     function isValidTransaction(data) {
-      return data.keys().hasAll(['userId', 'date', 'amount', 'type']) &&
+      return data.keys().hasAll(['userId', 'date', 'amount', 'type', 'accountId']) &&
              data.userId == request.auth.uid &&
              data.amount is number &&
-             data.type in ['income', 'expense', 'debt_payment', 'investment_deposit'];
+             data.type in ['income', 'expense', 'debt_payment', 'debt_expense', 'investment_deposit', 'investment_withdrawal'];
     }
 
     match /users/{userId} {
@@ -95,7 +95,7 @@ service cloud.firestore {
       
       match /transactions/{transactionId} {
         allow read: if isOwner(userId) || isAdmin();
-        allow create: if isOwner(userId) && isValidTransaction(request.resource.data);
+        allow create, update: if isOwner(userId) && isValidTransaction(request.resource.data);
         allow delete: if isOwner(userId) || isAdmin();
       }
     }
