@@ -45,7 +45,8 @@ import {
   XAxis, 
   YAxis, 
   Tooltip, 
-  Legend 
+  Legend,
+  LabelList
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -228,6 +229,7 @@ export default function App() {
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
+  const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
 
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -291,13 +293,16 @@ export default function App() {
   const netWorth = totalCash + totalInvestments - totalDebt;
 
   // Chart Data
+  const totalAssets = totalCash + totalInvestments + totalDebt;
+  
   const assetAllocationData = [
     { name: 'Cash', value: totalCash, color: '#00e5c2' },
     { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
     { name: 'Debt', value: totalDebt, color: '#f87171' },
-  ];
-
-  const totalAssets = totalCash + totalInvestments + totalDebt;
+  ].map(item => ({
+    ...item,
+    percent: totalAssets > 0 ? (item.value / totalAssets) * 100 : 0
+  }));
 
   const handleAddAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -741,7 +746,7 @@ export default function App() {
         {/* Summary Section */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
               <Wallet size={48} />
             </div>
             <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Cash</p>
@@ -753,7 +758,7 @@ export default function App() {
           </Card>
 
           <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-purple-400">
               <TrendingUp size={48} />
             </div>
             <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Investments</p>
@@ -765,7 +770,7 @@ export default function App() {
           </Card>
 
           <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-red-400">
               <CreditCard size={48} />
             </div>
             <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Debt</p>
@@ -855,6 +860,12 @@ export default function App() {
                     barSize={60}
                     animationDuration={1500}
                   >
+                    <LabelList 
+                      dataKey="value" 
+                      position="top" 
+                      formatter={(val: number) => formatCurrency(val)}
+                      style={{ fill: '#e6e8eb', fontSize: 10, fontWeight: 'bold', opacity: 0.6 }}
+                    />
                     {
                       [
                         { name: 'Cash', gradient: 'url(#barGradientCash)' },
@@ -882,10 +893,6 @@ export default function App() {
               </div>
             </div>
             <div className="h-[280px] w-full relative">
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-[0.2em]">Total</p>
-                <p className="text-xl font-black text-[#e6e8eb]">{formatCurrency(totalCash + totalInvestments)}</p>
-              </div>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <defs>
@@ -935,9 +942,12 @@ export default function App() {
             </div>
             <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
               {assetAllocationData.slice(0, 4).map((item, idx) => (
-                <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/5">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] font-medium text-[#e6e8eb]/60 truncate">{item.name}</span>
+                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-[10px] font-medium text-[#e6e8eb]/60 truncate">{item.name}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
                 </div>
               ))}
             </div>
