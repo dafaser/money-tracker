@@ -1,0 +1,81 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Account": {
+      "title": "Account",
+      "description": "Cash or bank account",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "balance": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "balance"]
+    },
+    "Investment": {
+      "title": "Investment",
+      "description": "Investment asset",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "value": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "value"]
+    },
+    "Liability": {
+      "title": "Liability",
+      "description": "Debt or liability",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "amount"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial transaction record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "category": { "type": "string" },
+        "accountId": { "type": "string" },
+        "accountType": { "type": "string", "enum": ["cash", "investment", "liability"] },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["income", "expense", "debt_payment", "investment_deposit"] },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "date", "amount", "type"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/users/{userId}/accounts/{accountId}": { "schema": "Account", "description": "User cash accounts" },
+    "/users/{userId}/investments/{investmentId}": { "schema": "Investment", "description": "User investments" },
+    "/users/{userId}/liabilities/{liabilityId}": { "schema": "Liability", "description": "User liabilities" },
+    "/users/{userId}/transactions/{transactionId}": { "schema": "Transaction", "description": "User transactions" }
+  }
+}

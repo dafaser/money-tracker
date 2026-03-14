@@ -1,0 +1,5 @@
+{
+  "name": "LuxWealth Tracker",
+  "description": "A luxury dark mode personal finance dashboard for tracking assets, investments, and liabilities with real-time Firestore sync.",
+  "requestFramePermissions": []
+}

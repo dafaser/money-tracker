@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid is string &&
+             data.email is string;
+    }
+
+    function isValidAccount(data) {
+      return data.keys().hasAll(['userId', 'name', 'balance']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.balance is number;
+    }
+
+    function isValidInvestment(data) {
+      return data.keys().hasAll(['userId', 'name', 'value']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.value is number;
+    }
+
+    function isValidLiability(data) {
+      return data.keys().hasAll(['userId', 'name', 'amount']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.amount is number;
+    }
+
+    function isValidTransaction(data) {
+      return data.keys().hasAll(['userId', 'date', 'amount', 'type']) &&
+             data.userId == request.auth.uid &&
+             data.amount is number &&
+             data.type in ['income', 'expense', 'debt_payment', 'investment_deposit'];
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      match /accounts/{accountId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidAccount(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /investments/{investmentId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidInvestment(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /liabilities/{liabilityId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidLiability(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+      
+      match /transactions/{transactionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidTransaction(request.resource.data);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}
