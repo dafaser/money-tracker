@@ -15,7 +15,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth, signInWithGoogle, logout } from './firebase';
+import { db, auth, signInWithGoogle, signInWithApple, logout } from './firebase';
 import { Account, Investment, Liability, Transaction, UserProfile } from './types';
 import { formatCurrency, cn } from './utils';
 import { 
@@ -365,6 +365,21 @@ export default function App() {
     }
   };
 
+  const handleAppleLogin = async () => {
+    try {
+      await signInWithApple();
+    } catch (error: any) {
+      console.error("Apple Login Error:", error);
+      if (error.code === 'auth/unauthorized-domain') {
+        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+      } else if (error.code === 'auth/popup-blocked') {
+        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+      } else {
+        alert("Gagal login Apple: " + error.message);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
@@ -375,20 +390,116 @@ export default function App() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center p-4 relative overflow-hidden">
+        {/* Luxury Background Animation */}
+        <div className="absolute inset-0 z-0">
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              rotate: [0, 90, 0],
+              opacity: [0.1, 0.2, 0.1]
+            }}
+            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-[#00e5c2]/20 to-transparent rounded-full blur-[120px]"
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1.2, 1, 1.2],
+              rotate: [90, 0, 90],
+              opacity: [0.1, 0.15, 0.1]
+            }}
+            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
+            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-500/20 to-transparent rounded-full blur-[120px]"
+          />
+          
+          {/* Floating Particles */}
+          {[...Array(20)].map((_, i) => (
+            <motion.div
+              key={i}
+              initial={{ 
+                x: Math.random() * window.innerWidth, 
+                y: Math.random() * window.innerHeight,
+                opacity: Math.random() * 0.5
+              }}
+              animate={{ 
+                y: [null, Math.random() * -100 - 50],
+                opacity: [null, 0]
+              }}
+              transition={{ 
+                duration: Math.random() * 5 + 5, 
+                repeat: Infinity, 
+                ease: "linear" 
+              }}
+              className="absolute w-1 h-1 bg-white rounded-full"
+            />
+          ))}
+        </div>
+
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-md text-center"
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="w-full max-w-md text-center relative z-10"
         >
-          <div className="w-20 h-20 bg-[#00e5c2]/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
-            <TrendingUp size={40} className="text-[#00e5c2]" />
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="w-24 h-24 bg-gradient-to-br from-[#00e5c2] to-[#00c9ab] rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-[#00e5c2]/30"
+          >
+            <TrendingUp size={48} className="text-[#0f1115]" />
+          </motion.div>
+          
+          <motion.h1 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-5xl font-black text-[#e6e8eb] mb-4 tracking-tighter"
+          >
+            LuxWealth
+          </motion.h1>
+          
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="text-[#e6e8eb]/50 mb-12 text-xl font-light tracking-wide"
+          >
+            The pinnacle of personal finance.
+          </motion.p>
+
+          <div className="space-y-4">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.7 }}
+            >
+              <Button onClick={handleLogin} className="w-full py-5 text-lg rounded-2xl bg-white text-black hover:bg-gray-100 shadow-xl transition-all duration-300">
+                <img src="https://www.google.com/favicon.ico" className="w-5 h-5 mr-2" alt="Google" />
+                Continue with Google
+              </Button>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 }}
+            >
+              <Button onClick={handleAppleLogin} className="w-full py-5 text-lg rounded-2xl bg-black text-white border border-white/10 hover:bg-zinc-900 shadow-xl transition-all duration-300">
+                <svg className="w-5 h-5 mr-2 fill-current" viewBox="0 0 384 512">
+                  <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
+                </svg>
+                Continue with Apple
+              </Button>
+            </motion.div>
           </div>
-          <h1 className="text-4xl font-black text-[#e6e8eb] mb-4 tracking-tight">LuxWealth</h1>
-          <p className="text-[#e6e8eb]/60 mb-12 text-lg">Your elite personal finance dashboard.</p>
-          <Button onClick={handleLogin} className="w-full py-4 text-lg rounded-2xl shadow-lg shadow-[#00e5c2]/20">
-            Sign in with Google
-          </Button>
+
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.3 }}
+            transition={{ delay: 1.2 }}
+            className="mt-16 text-xs uppercase tracking-[0.3em] text-[#e6e8eb]"
+          >
+            Secured by Firebase Elite
+          </motion.div>
         </motion.div>
       </div>
     );
