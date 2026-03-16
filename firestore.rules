@@ -77,7 +77,7 @@ service cloud.firestore {
     function isValidInformation(data) {
       return data.keys().hasAll(['userId', 'type', 'provider', 'accountNumber']) &&
              data.userId == request.auth.uid &&
-             data.type in ['bank', 'ewallet'] &&
+             data.type in ['bank', 'ewallet', 'crypto', 'rdn'] &&
              data.provider is string && data.provider.size() > 0 && data.provider.size() < 100 &&
              data.accountNumber is string && data.accountNumber.size() > 0 && data.accountNumber.size() < 100;
     }

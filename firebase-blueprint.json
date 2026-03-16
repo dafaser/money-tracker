@@ -77,7 +77,7 @@
       "properties": {
         "id": { "type": "string" },
         "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["bank", "ewallet"] },
+        "type": { "type": "string", "enum": ["bank", "ewallet", "crypto", "rdn"] },
         "provider": { "type": "string", "description": "Bank name or E-wallet name" },
         "accountNumber": { "type": "string", "description": "Account number or Phone number" },
         "accountName": { "type": "string", "description": "Name on account" },

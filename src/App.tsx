@@ -144,8 +144,11 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 // --- Components ---
 
-const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("bg-[#1a1d23] border border-[#2a2e36] rounded-2xl p-6 shadow-xl", className)}>
+const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
+  <div 
+    onClick={onClick}
+    className={cn("bg-[#1a1d23] border border-[#2a2e36] rounded-2xl p-6 shadow-xl", className)}
+  >
     {children}
   </div>
 );
@@ -218,7 +221,8 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = () => {
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -232,6 +236,28 @@ const CopyButton = ({ text }: { text: string }) => {
     >
       {copied ? <Check size={16} className="text-[#00e5c2]" /> : <Copy size={16} />}
     </button>
+  );
+};
+
+const Notification = ({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50, x: '-50%' }}
+      animate={{ opacity: 1, y: 0, x: '-50%' }}
+      exit={{ opacity: 0, y: 50, x: '-50%' }}
+      className={cn(
+        "fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-xl",
+        type === 'success' ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
+      )}
+    >
+      {type === 'success' ? <Check size={20} /> : <AlertCircle size={20} />}
+      <span className="font-medium">{message}</span>
+    </motion.div>
   );
 };
 
@@ -259,6 +285,8 @@ export default function App() {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
+  const [selectedInfoId, setSelectedInfoId] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -325,6 +353,7 @@ export default function App() {
   const totalInvestments = investments.reduce((acc, curr) => acc + curr.value, 0);
   const totalDebt = liabilities.reduce((acc, curr) => acc + curr.amount, 0);
   const netWorth = totalCash + totalInvestments - totalDebt;
+  const netCash = totalCash - totalDebt;
 
   // Chart Data
   const totalAssets = totalCash + totalInvestments + totalDebt;
@@ -347,6 +376,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { name, balance, updatedAt: new Date().toISOString() });
+      setNotification({ message: 'Account updated successfully', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/accounts`), {
         userId: user.uid,
@@ -354,6 +384,7 @@ export default function App() {
         balance,
         updatedAt: new Date().toISOString()
       });
+      setNotification({ message: 'Account added successfully', type: 'success' });
     }
     setIsAccountModalOpen(false);
     setEditingItem(null);
@@ -369,6 +400,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/investments`, editingItem.id), { name, value, category, updatedAt: new Date().toISOString() });
+      setNotification({ message: 'Investment updated successfully', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/investments`), {
         userId: user.uid,
@@ -377,6 +409,7 @@ export default function App() {
         category,
         updatedAt: new Date().toISOString()
       });
+      setNotification({ message: 'Investment added successfully', type: 'success' });
     }
     setIsInvestmentModalOpen(false);
     setEditingItem(null);
@@ -391,6 +424,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { name, amount, updatedAt: new Date().toISOString() });
+      setNotification({ message: 'Liability updated successfully', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/liabilities`), {
         userId: user.uid,
@@ -398,6 +432,7 @@ export default function App() {
         amount,
         updatedAt: new Date().toISOString()
       });
+      setNotification({ message: 'Liability added successfully', type: 'success' });
     }
     setIsLiabilityModalOpen(false);
     setEditingItem(null);
@@ -420,6 +455,7 @@ export default function App() {
         accountName, 
         updatedAt: new Date().toISOString() 
       });
+      setNotification({ message: 'Information updated successfully', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/information`), {
         userId: user.uid,
@@ -429,6 +465,7 @@ export default function App() {
         accountName,
         updatedAt: new Date().toISOString()
       });
+      setNotification({ message: 'Information added successfully', type: 'success' });
     }
     setIsInformationModalOpen(false);
     setEditingItem(null);
@@ -503,6 +540,7 @@ export default function App() {
       setIsTransactionModalOpen(false);
       setEditingItem(null);
       setSelectedAccountId('');
+      setNotification({ message: editingItem ? 'Transaction updated' : 'Transaction recorded', type: 'success' });
     } catch (error) {
       console.error("Error saving transaction:", error);
     }
@@ -836,7 +874,7 @@ export default function App() {
         {activeTab === 'dashboard' ? (
           <>
             {/* Summary Section */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card className="relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
               <Wallet size={48} />
@@ -870,6 +908,20 @@ export default function App() {
             <div className="mt-4 flex items-center gap-2 text-red-400 text-xs font-medium">
               <ArrowDownLeft size={14} />
               <span>Liabilities</span>
+            </div>
+          </Card>
+
+          <Card className="relative overflow-hidden group border-[#00e5c2]/20">
+            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
+              <Wallet size={48} />
+            </div>
+            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Net Cash</p>
+            <h3 className={cn("text-2xl font-bold", netCash >= 0 ? "text-[#00e5c2]" : "text-red-400")}>
+              {formatCurrency(netCash)}
+            </h3>
+            <div className="mt-4 flex items-center gap-2 text-[#e6e8eb]/40 text-xs font-medium">
+              <ArrowUpRight size={14} />
+              <span>Cash - Debt</span>
             </div>
           </Card>
 
@@ -1280,34 +1332,58 @@ export default function App() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {information.map((info) => (
-                <Card key={info.id} className="relative group hover:border-[#00e5c2]/30 transition-all">
+                <Card 
+                  key={info.id} 
+                  onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
+                  className={cn(
+                    "relative group hover:border-[#00e5c2]/30 transition-all cursor-pointer",
+                    selectedInfoId === info.id ? "border-[#00e5c2]/50 ring-1 ring-[#00e5c2]/20" : ""
+                  )}
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "p-3 rounded-xl",
-                        info.type === 'bank' ? "bg-blue-500/10 text-blue-500" : "bg-[#00e5c2]/10 text-[#00e5c2]"
+                        info.type === 'bank' ? "bg-blue-500/10 text-blue-500" : 
+                        info.type === 'ewallet' ? "bg-[#00e5c2]/10 text-[#00e5c2]" :
+                        info.type === 'crypto' ? "bg-orange-500/10 text-orange-500" :
+                        "bg-purple-500/10 text-purple-500"
                       )}>
-                        {info.type === 'bank' ? <Wallet size={24} /> : <TrendingUp size={24} />}
+                        {info.type === 'bank' ? <Wallet size={24} /> : 
+                         info.type === 'ewallet' ? <TrendingUp size={24} /> :
+                         info.type === 'crypto' ? <TrendingUp size={24} /> :
+                         <LayoutDashboard size={24} />}
                       </div>
                       <div>
                         <h4 className="font-bold text-lg">{info.provider}</h4>
                         <p className="text-xs text-[#e6e8eb]/40 uppercase tracking-widest">{info.type}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => { setEditingItem(info); setIsInformationModalOpen(true); }}
-                        className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2]"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        onClick={() => deleteDoc(doc(db, `users/${user.uid}/information`, info.id))}
-                        className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-red-400"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
+                    <AnimatePresence>
+                      {selectedInfoId === info.id && (
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                          animate={{ opacity: 1, scale: 1, x: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                          className="flex items-center gap-1"
+                        >
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
+                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] border border-white/10 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, `users/${user.uid}/information`, info.id)); }}
+                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-red-400 border border-white/10 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
 
                   <div className="space-y-4">
@@ -1514,6 +1590,8 @@ export default function App() {
             <select name="type" defaultValue={editingItem?.type || 'bank'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
               <option value="bank">Bank Account</option>
               <option value="ewallet">E-Wallet</option>
+              <option value="crypto">Crypto Wallet</option>
+              <option value="rdn">RDN Account</option>
             </select>
           </div>
           <div>
@@ -1561,6 +1639,16 @@ export default function App() {
       <footer className="max-w-7xl mx-auto px-4 py-12 text-center text-[#e6e8eb]/20 text-sm">
         <p>&copy; 2026 LuxWealth Tracker. All rights reserved.</p>
       </footer>
+
+      <AnimatePresence>
+        {notification && (
+          <Notification 
+            message={notification.message} 
+            type={notification.type} 
+            onClose={() => setNotification(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
     </ErrorBoundary>
   );

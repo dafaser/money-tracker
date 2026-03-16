@@ -48,7 +48,7 @@ export interface UserProfile {
 export interface Information {
   id: string;
   userId: string;
-  type: 'bank' | 'ewallet';
+  type: 'bank' | 'ewallet' | 'crypto' | 'rdn';
   provider: string;
   accountNumber: string;
   accountName: string;
