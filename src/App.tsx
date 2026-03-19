@@ -20,38 +20,32 @@ import { db, auth, signInWithGoogle, signInWithApple, logout } from './firebase'
 import { Account, Investment, Liability, Transaction, UserProfile, Information } from './types';
 import { formatCurrency, cn } from './utils';
 import { 
-  Wallet, 
-  TrendingUp, 
-  CreditCard, 
-  Plus, 
-  LogOut, 
-  Trash2, 
-  Edit2, 
-  ArrowUpRight, 
+  LayoutDashboard,
+  Info,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Home,
+  Activity,
+  User as UserIcon,
+  Settings,
+  Bell,
+  Play,
+  TrendingUp,
+  Wallet,
+  CreditCard,
+  Plus,
+  LogOut,
+  Trash2,
+  Edit2,
+  ArrowUpRight,
   ArrowDownLeft,
-  PieChart as PieChartIcon,
-  BarChart3,
   History,
   X,
   AlertCircle,
   Copy,
-  Check,
-  LayoutDashboard,
-  Info
+  Check
 } from 'lucide-react';
-import { 
-  PieChart, 
-  Pie, 
-  Cell, 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  Legend,
-  LabelList
-} from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 
 // --- Types ---
@@ -144,13 +138,19 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 // --- Components ---
 
-const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div 
+const Card = ({ children, className, onClick, hover = true }: { children: React.ReactNode; className?: string; onClick?: () => void; hover?: boolean }) => (
+  <motion.div 
+    whileHover={hover ? { scale: 1.02, zIndex: 10 } : {}}
+    transition={{ type: "spring", stiffness: 300, damping: 20 }}
     onClick={onClick}
-    className={cn("bg-[#1a1d23] border border-[#2a2e36] rounded-2xl p-6 shadow-xl", className)}
+    className={cn(
+      "bg-[#1a1d23]/60 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl", 
+      hover && "hover:border-white/30 hover:shadow-[#0072d2]/10 cursor-pointer",
+      className
+    )}
   >
     {children}
-  </div>
+  </motion.div>
 );
 
 const Button = ({ 
@@ -167,10 +167,10 @@ const Button = ({
   disabled?: boolean;
 }) => {
   const variants = {
-    primary: "bg-[#00e5c2] text-[#0f1115] hover:bg-[#00c9ab]",
-    secondary: "bg-[#2a2e36] text-[#e6e8eb] hover:bg-[#353a44]",
+    primary: "bg-[#0072d2] text-white hover:bg-[#005bb5] shadow-lg shadow-[#0072d2]/20",
+    secondary: "bg-white/10 text-[#e6e8eb] hover:bg-white/20 backdrop-blur-md border border-white/10",
     danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20",
-    ghost: "bg-transparent text-[#e6e8eb] hover:bg-[#2a2e36]"
+    ghost: "bg-transparent text-[#e6e8eb] hover:bg-white/5"
   };
 
   return (
@@ -188,6 +188,26 @@ const Button = ({
   );
 };
 
+const Toast = ({ message, type = 'info', onClose }: { message: string; type?: 'info' | 'error' | 'success'; onClose: () => void }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50, x: '-50%' }}
+    animate={{ opacity: 1, y: 0, x: '-50%' }}
+    exit={{ opacity: 0, y: 50, x: '-50%' }}
+    className={cn(
+      "fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 min-w-[300px] backdrop-blur-xl border",
+      type === 'error' ? "bg-red-500/10 border-red-500/20 text-red-500" : 
+      type === 'success' ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" :
+      "bg-[#0072d2]/10 border-[#0072d2]/20 text-[#0072d2]"
+    )}
+  >
+    {type === 'error' ? <AlertCircle size={20} /> : type === 'success' ? <Check size={20} /> : <Info size={20} />}
+    <span className="flex-1 font-medium">{message}</span>
+    <button onClick={onClose} className="hover:opacity-70 transition-opacity">
+      <X size={18} />
+    </button>
+  </motion.div>
+);
+
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => (
   <AnimatePresence>
     {isOpen && (
@@ -197,17 +217,17 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose:
           animate={{ opacity: 1 }} 
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-[#030b17]/80 backdrop-blur-sm"
         />
         <motion.div 
           initial={{ opacity: 0, scale: 0.95, y: 20 }} 
           animate={{ opacity: 1, scale: 1, y: 0 }} 
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-md bg-[#1a1d23] border border-[#2a2e36] rounded-3xl p-8 shadow-2xl"
+          className="relative w-full max-w-md bg-[#1a1d23] border border-white/10 rounded-3xl p-8 shadow-2xl"
         >
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-bold text-[#e6e8eb]">{title}</h3>
-            <button onClick={onClose} className="p-2 hover:bg-[#2a2e36] rounded-full transition-colors">
+            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
               <X size={20} className="text-[#e6e8eb]" />
             </button>
           </div>
@@ -231,10 +251,10 @@ const CopyButton = ({ text }: { text: string }) => {
   return (
     <button 
       onClick={handleCopy}
-      className="p-2 hover:bg-[#2a2e36] rounded-lg text-[#e6e8eb]/40 hover:text-[#00e5c2] transition-all"
+      className="p-2 hover:bg-white/5 rounded-lg text-[#e6e8eb]/40 hover:text-[#0072d2] transition-all"
       title="Copy to clipboard"
     >
-      {copied ? <Check size={16} className="text-[#00e5c2]" /> : <Copy size={16} />}
+      {copied ? <Check size={16} className="text-[#0072d2]" /> : <Copy size={16} />}
     </button>
   );
 };
@@ -251,7 +271,7 @@ const Notification = ({ message, type, onClose }: { message: string; type: 'succ
       animate={{ opacity: 1, y: 0, x: '-50%' }}
       exit={{ opacity: 0, y: 50, x: '-50%' }}
       className={cn(
-        "fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-xl",
+        "fixed bottom-8 left-1/2 z-[100] px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-2xl",
         type === 'success' ? "bg-green-500/10 border-green-500/20 text-green-500" : "bg-red-500/10 border-red-500/20 text-red-500"
       )}
     >
@@ -260,6 +280,191 @@ const Notification = ({ message, type, onClose }: { message: string; type: 'succ
     </motion.div>
   );
 };
+
+// --- Disney+ Hotstar Style Components ---
+
+const SidebarItem = ({ icon: Icon, label, active, onClick, collapsed }: { icon: any; label: string; active?: boolean; onClick: () => void; collapsed: boolean }) => (
+  <button
+    onClick={onClick}
+    className={cn(
+      "flex items-center gap-4 w-full p-3 rounded-xl transition-all duration-300 group relative",
+      active ? "text-white" : "text-gray-400 hover:text-white"
+    )}
+  >
+    <div className={cn(
+      "transition-transform duration-300 group-hover:scale-110",
+      active ? "text-[#0072d2]" : ""
+    )}>
+      <Icon size={24} />
+    </div>
+    {!collapsed && (
+      <motion.span
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="font-medium text-sm"
+      >
+        {label}
+      </motion.span>
+    )}
+    {active && (
+      <motion.div
+        layoutId="active-nav"
+        className="absolute left-0 w-1 h-6 bg-[#0072d2] rounded-r-full"
+      />
+    )}
+  </button>
+);
+
+const HeroBanner = ({ netWorth, user }: { netWorth: number; user: User }) => (
+  <section className="relative h-[60vh] min-h-[400px] w-full rounded-3xl overflow-hidden mb-8 group">
+    <div className="absolute inset-0">
+      <img 
+        src="https://picsum.photos/seed/finance-luxury/1920/1080?blur=2" 
+        alt="Hero Background" 
+        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+        referrerPolicy="no-referrer"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#030b17] via-[#030b17]/40 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#030b17] via-[#030b17]/20 to-transparent" />
+    </div>
+    
+    <div className="absolute bottom-0 left-0 p-8 md:p-16 w-full max-w-2xl">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-[#0072d2] mb-4 inline-block border border-white/10">
+          Portofolio Unggulan
+        </span>
+        <h1 className="text-4xl md:text-6xl font-black text-white mb-4 tracking-tighter">
+          Selamat datang kembali, {user.displayName?.split(' ')[0]}
+        </h1>
+        <p className="text-lg text-gray-300 mb-8 line-clamp-2 max-w-lg">
+          Kerajaan finansial Anda sedang berkembang. Saat ini mengelola total kekayaan bersih sebesar {formatCurrency(netWorth)}. Pertahankan kerja bagus Anda!
+        </p>
+        
+        <div className="flex items-center gap-4">
+          <Button className="bg-white text-black hover:bg-gray-200 px-8 py-3 rounded-lg font-bold flex items-center gap-2">
+            <Play size={20} fill="currentColor" /> Lihat Laporan
+          </Button>
+          <Button variant="secondary" className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/20 px-8 py-3 rounded-lg font-bold">
+            <Plus size={20} /> Tambah Aset
+          </Button>
+        </div>
+      </motion.div>
+    </div>
+  </section>
+);
+
+const ContentRow = ({ title, children }: { title: string; children: React.ReactNode }) => {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft, clientWidth } = scrollRef.current;
+      const scrollTo = direction === 'left' ? scrollLeft - clientWidth : scrollLeft + clientWidth;
+      scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="space-y-4 mb-12">
+      <div className="flex items-center justify-between px-4">
+        <h2 className="text-xl font-bold text-white tracking-tight">{title}</h2>
+        <div className="flex gap-2">
+          <button onClick={() => scroll('left')} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+            <ChevronLeft size={20} />
+          </button>
+          <button onClick={() => scroll('right')} className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors">
+            <ChevronRight size={20} />
+          </button>
+        </div>
+      </div>
+      <div 
+        ref={scrollRef}
+        className="flex gap-4 overflow-x-auto scrollbar-hide px-4 pb-4 snap-x"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const ContentCard = ({ 
+  title, 
+  subtitle, 
+  value, 
+  color, 
+  icon: Icon, 
+  onClick, 
+  onEdit, 
+  onDelete,
+  imageUrl 
+}: { 
+  title: string; 
+  subtitle?: string; 
+  value: string; 
+  color: string; 
+  icon: any; 
+  onClick?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  imageUrl?: string;
+}) => (
+  <motion.div
+    whileHover={{ scale: 1.05, zIndex: 10 }}
+    className="flex-shrink-0 w-64 h-40 relative rounded-xl overflow-hidden cursor-pointer group snap-start bg-[#1a1d23] border border-white/5 shadow-2xl"
+    onClick={onClick}
+  >
+    <div className="absolute inset-0">
+      <img 
+        src={imageUrl || `https://picsum.photos/seed/${title}/400/250`} 
+        alt={title} 
+        className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-300"
+        referrerPolicy="no-referrer"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#0f1115] via-[#0f1115]/60 to-transparent" />
+      <div className="absolute inset-0 group-hover:ring-2 group-hover:ring-[#0072d2]/50 transition-all duration-300 rounded-xl" />
+      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center border border-white/30">
+          <Play size={24} className="text-white ml-1" fill="currentColor" />
+        </div>
+      </div>
+    </div>
+    <div className="absolute inset-0 p-4 flex flex-col justify-end">
+      <div className="flex items-center gap-2 mb-1">
+        <div className="p-1.5 rounded-md bg-white/10 backdrop-blur-md" style={{ color }}>
+          <Icon size={14} />
+        </div>
+        <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">{subtitle || 'Aset'}</p>
+      </div>
+      <h3 className="font-bold text-white truncate">{title}</h3>
+      <p className="text-lg font-black" style={{ color }}>{value}</p>
+    </div>
+
+    {/* Hover Actions */}
+    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      {onEdit && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); onEdit(); }}
+          className="p-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white hover:text-[#0072d2] transition-colors"
+        >
+          <Edit2 size={12} />
+        </button>
+      )}
+      {onDelete && (
+        <button 
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="p-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white hover:text-red-400 transition-colors"
+        >
+          <Trash2 size={12} />
+        </button>
+      )}
+    </div>
+  </motion.div>
+);
 
 // --- Main App ---
 
@@ -282,11 +487,16 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isInformationModalOpen, setIsInformationModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
-  const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
   const [selectedInfoId, setSelectedInfoId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setNotification({ message, type });
+  };
 
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -353,19 +563,6 @@ export default function App() {
   const totalInvestments = investments.reduce((acc, curr) => acc + curr.value, 0);
   const totalDebt = liabilities.reduce((acc, curr) => acc + curr.amount, 0);
   const netWorth = totalCash + totalInvestments - totalDebt;
-  const netCash = totalCash - totalDebt;
-
-  // Chart Data
-  const totalAssets = totalCash + totalInvestments + totalDebt;
-  
-  const assetAllocationData = [
-    { name: 'Cash', value: totalCash, color: '#00e5c2' },
-    { name: 'Investments', value: totalInvestments, color: '#8b5cf6' },
-    { name: 'Debt', value: totalDebt, color: '#f87171' },
-  ].map(item => ({
-    ...item,
-    percent: totalAssets > 0 ? (item.value / totalAssets) * 100 : 0
-  }));
 
   const handleAddAccount = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -376,7 +573,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { name, balance, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Account updated successfully', type: 'success' });
+      setNotification({ message: 'Akun berhasil diperbarui', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/accounts`), {
         userId: user.uid,
@@ -384,7 +581,7 @@ export default function App() {
         balance,
         updatedAt: new Date().toISOString()
       });
-      setNotification({ message: 'Account added successfully', type: 'success' });
+      setNotification({ message: 'Akun berhasil ditambahkan', type: 'success' });
     }
     setIsAccountModalOpen(false);
     setEditingItem(null);
@@ -400,7 +597,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/investments`, editingItem.id), { name, value, category, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Investment updated successfully', type: 'success' });
+      setNotification({ message: 'Investasi berhasil diperbarui', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/investments`), {
         userId: user.uid,
@@ -409,7 +606,7 @@ export default function App() {
         category,
         updatedAt: new Date().toISOString()
       });
-      setNotification({ message: 'Investment added successfully', type: 'success' });
+      setNotification({ message: 'Investasi berhasil ditambahkan', type: 'success' });
     }
     setIsInvestmentModalOpen(false);
     setEditingItem(null);
@@ -424,7 +621,7 @@ export default function App() {
 
     if (editingItem) {
       await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { name, amount, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Liability updated successfully', type: 'success' });
+      setNotification({ message: 'Liabilitas berhasil diperbarui', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/liabilities`), {
         userId: user.uid,
@@ -432,7 +629,7 @@ export default function App() {
         amount,
         updatedAt: new Date().toISOString()
       });
-      setNotification({ message: 'Liability added successfully', type: 'success' });
+      setNotification({ message: 'Liabilitas berhasil ditambahkan', type: 'success' });
     }
     setIsLiabilityModalOpen(false);
     setEditingItem(null);
@@ -455,7 +652,7 @@ export default function App() {
         accountName, 
         updatedAt: new Date().toISOString() 
       });
-      setNotification({ message: 'Information updated successfully', type: 'success' });
+      setNotification({ message: 'Informasi berhasil diperbarui', type: 'success' });
     } else {
       await addDoc(collection(db, `users/${user.uid}/information`), {
         userId: user.uid,
@@ -465,7 +662,7 @@ export default function App() {
         accountName,
         updatedAt: new Date().toISOString()
       });
-      setNotification({ message: 'Information added successfully', type: 'success' });
+      setNotification({ message: 'Informasi berhasil ditambahkan', type: 'success' });
     }
     setIsInformationModalOpen(false);
     setEditingItem(null);
@@ -483,7 +680,7 @@ export default function App() {
     const date = editingItem ? (editingItem as Transaction).date : new Date().toISOString();
 
     if (!accountId) {
-      alert('Please select a target account. If the list is empty, add an account first.');
+      showToast('Silakan pilih akun target. Jika daftar kosong, tambahkan akun terlebih dahulu.', 'error');
       return;
     }
 
@@ -540,7 +737,7 @@ export default function App() {
       setIsTransactionModalOpen(false);
       setEditingItem(null);
       setSelectedAccountId('');
-      setNotification({ message: editingItem ? 'Transaction updated' : 'Transaction recorded', type: 'success' });
+      setNotification({ message: editingItem ? 'Transaksi diperbarui' : 'Transaksi tercatat', type: 'success' });
     } catch (error) {
       console.error("Error saving transaction:", error);
     }
@@ -670,11 +867,11 @@ export default function App() {
     } catch (error: any) {
       console.error("Login Error:", error);
       if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+        showToast("Domain ini tidak diizinkan di Firebase Console. Silakan tambahkan domain Anda ke 'Authorized Domains' di pengaturan Firebase Authentication.", 'error');
       } else if (error.code === 'auth/popup-blocked') {
-        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+        showToast("Popup login diblokir oleh browser Anda. Silakan izinkan popup untuk situs ini.", 'error');
       } else {
-        alert("Gagal login: " + error.message);
+        showToast("Login gagal: " + error.message, 'error');
       }
     }
   };
@@ -685,26 +882,26 @@ export default function App() {
     } catch (error: any) {
       console.error("Apple Login Error:", error);
       if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+        showToast("Domain ini tidak diizinkan di Firebase Console. Silakan tambahkan domain Anda ke 'Authorized Domains' di pengaturan Firebase Authentication.", 'error');
       } else if (error.code === 'auth/popup-blocked') {
-        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+        showToast("Popup login diblokir oleh browser Anda. Silakan izinkan popup untuk situs ini.", 'error');
       } else {
-        alert("Gagal login Apple: " + error.message);
+        showToast("Login Apple gagal: " + error.message, 'error');
       }
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#00e5c2] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#030b17] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#0072d2] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-[#030b17] flex items-center justify-center p-4 relative overflow-hidden">
         {/* Luxury Background Animation */}
         <div className="absolute inset-0 z-0">
           <motion.div 
@@ -714,7 +911,7 @@ export default function App() {
               opacity: [0.1, 0.2, 0.1]
             }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-[#00e5c2]/20 to-transparent rounded-full blur-[120px]"
+            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-[#0072d2]/20 to-transparent rounded-full blur-[120px]"
           />
           <motion.div 
             animate={{ 
@@ -723,7 +920,7 @@ export default function App() {
               opacity: [0.1, 0.15, 0.1]
             }}
             transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-500/20 to-transparent rounded-full blur-[120px]"
+            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-[#0072d2]/20 to-transparent rounded-full blur-[120px]"
           />
           
           {/* Floating Particles */}
@@ -757,9 +954,9 @@ export default function App() {
         >
           <motion.div 
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-24 h-24 bg-gradient-to-br from-[#00e5c2] to-[#00c9ab] rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-[#00e5c2]/30"
+            className="w-24 h-24 bg-gradient-to-br from-[#0072d2] to-[#0072d2]/60 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-[#0072d2]/30"
           >
-            <TrendingUp size={48} className="text-[#0f1115]" />
+            <TrendingUp size={48} className="text-white" />
           </motion.div>
           
           <motion.h1 
@@ -777,7 +974,7 @@ export default function App() {
             transition={{ delay: 0.5 }}
             className="text-[#e6e8eb]/50 mb-12 text-xl font-light tracking-wide"
           >
-            The pinnacle of personal finance.
+            Puncak dari keuangan pribadi.
           </motion.p>
 
           <div className="space-y-4">
@@ -788,7 +985,7 @@ export default function App() {
             >
               <Button onClick={handleLogin} className="w-full py-5 text-lg rounded-2xl bg-white text-black hover:bg-gray-100 shadow-xl transition-all duration-300">
                 <img src="https://www.google.com/favicon.ico" className="w-5 h-5 mr-2" alt="Google" />
-                Continue with Google
+                Lanjutkan dengan Google
               </Button>
             </motion.div>
 
@@ -801,7 +998,7 @@ export default function App() {
                 <svg className="w-5 h-5 mr-2 fill-current" viewBox="0 0 384 512">
                   <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/>
                 </svg>
-                Continue with Apple
+                Lanjutkan dengan Apple
               </Button>
             </motion.div>
           </div>
@@ -812,7 +1009,7 @@ export default function App() {
             transition={{ delay: 1.2 }}
             className="mt-16 text-xs uppercase tracking-[0.3em] text-[#e6e8eb]"
           >
-            Secured by Firebase Elite
+            Diamankan oleh Firebase Elite
           </motion.div>
         </motion.div>
       </div>
@@ -821,681 +1018,376 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0f1115] text-[#e6e8eb] font-sans selection:bg-[#00e5c2]/30">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-xl border-b border-[#2a2e36]">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#00e5c2] rounded-xl flex items-center justify-center shadow-lg shadow-[#00e5c2]/20">
-              <TrendingUp size={24} className="text-[#0f1115]" />
+      <div className="flex h-screen bg-[#030b17] text-[#e1e6f0] font-sans selection:bg-[#0072d2]/30 overflow-hidden">
+        {/* Disney+ Style Sidebar */}
+        <aside 
+          onMouseEnter={() => setIsSidebarCollapsed(false)}
+          onMouseLeave={() => setIsSidebarCollapsed(true)}
+          className={cn(
+            "fixed left-0 top-0 h-full bg-[#030b17] border-r border-white/5 z-50 transition-all duration-300 flex flex-col items-center py-8",
+            isSidebarCollapsed ? "w-20" : "w-64 px-4"
+          )}
+        >
+          <div className="mb-12 flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-[#0072d2] to-[#0072d2]/60 rounded-xl flex items-center justify-center shadow-lg shadow-[#0072d2]/20 shrink-0">
+              <TrendingUp size={24} className="text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight">LuxWealth</span>
-            
-            <nav className="ml-4 flex items-center gap-1 bg-[#1a1d23] p-1 rounded-xl border border-[#2a2e36]">
-              <button 
-                onClick={() => setActiveTab('dashboard')}
-                className={cn(
-                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                  activeTab === 'dashboard' 
-                    ? "bg-[#00e5c2] text-[#0f1115]" 
-                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
-                )}
+            {!isSidebarCollapsed && (
+              <motion.span 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-xl font-black tracking-tighter"
               >
-                <LayoutDashboard size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Dashboard</span>
-              </button>
-              <button 
-                onClick={() => setActiveTab('information')}
-                className={cn(
-                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                  activeTab === 'information' 
-                    ? "bg-[#00e5c2] text-[#0f1115]" 
-                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
-                )}
-              >
-                <Info size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Information</span>
-              </button>
-            </nav>
+                LuxWealth
+              </motion.span>
+            )}
           </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col items-end mr-2">
-              <span className="text-sm font-medium">{user.displayName}</span>
-              <span className="text-xs text-[#e6e8eb]/40">{user.email}</span>
-            </div>
-            <img src={user.photoURL || ''} alt="Profile" className="w-10 h-10 rounded-full border border-[#2a2e36]" referrerPolicy="no-referrer" />
-            <button onClick={logout} className="p-2 hover:bg-[#2a2e36] rounded-xl transition-colors text-[#e6e8eb]/60 hover:text-red-400">
-              <LogOut size={20} />
-            </button>
+
+          <div className="flex-1 w-full space-y-2">
+            <SidebarItem 
+              icon={Home} 
+              label="Beranda" 
+              active={activeTab === 'dashboard'} 
+              onClick={() => setActiveTab('dashboard')} 
+              collapsed={isSidebarCollapsed} 
+            />
+            <SidebarItem 
+              icon={Search} 
+              label="Cari" 
+              onClick={() => {
+                const searchInput = document.querySelector('input[placeholder*="Cari"]') as HTMLInputElement;
+                if (searchInput) searchInput.focus();
+              }} 
+              collapsed={isSidebarCollapsed} 
+            />
+            <SidebarItem 
+              icon={Activity} 
+              label="Aktivitas" 
+              onClick={() => {}} 
+              collapsed={isSidebarCollapsed} 
+            />
+            <SidebarItem 
+              icon={Info} 
+              label="Informasi" 
+              active={activeTab === 'information'} 
+              onClick={() => setActiveTab('information')} 
+              collapsed={isSidebarCollapsed} 
+            />
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {activeTab === 'dashboard' ? (
-          <>
-            {/* Summary Section */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
-              <Wallet size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Cash</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalCash)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-[#00e5c2] text-xs font-medium">
-              <ArrowUpRight size={14} />
-              <span>Liquid Assets</span>
-            </div>
-          </Card>
+          <div className="w-full space-y-2">
+            <SidebarItem 
+              icon={Settings} 
+              label="Pengaturan" 
+              onClick={() => {}} 
+              collapsed={isSidebarCollapsed} 
+            />
+            <SidebarItem 
+              icon={LogOut} 
+              label="Keluar" 
+              onClick={logout} 
+              collapsed={isSidebarCollapsed} 
+            />
+          </div>
+        </aside>
 
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-purple-400">
-              <TrendingUp size={48} />
+        <div className={cn("flex-1 transition-all duration-300", isSidebarCollapsed ? "ml-20" : "ml-64")}>
+          {/* Top Header */}
+          <header className="sticky top-0 z-40 bg-[#030b17]/80 backdrop-blur-md h-20 flex items-center justify-between px-8 gap-6 border-b border-white/5">
+            <div className="flex-1 max-w-md relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#0072d2] transition-colors" size={18} />
+              <input 
+                type="text" 
+                placeholder="Cari aset, transaksi..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 pl-12 pr-4 focus:outline-none focus:border-[#0072d2]/50 focus:bg-white/10 transition-all text-sm"
+              />
             </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Investments</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalInvestments)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-purple-400 text-xs font-medium">
-              <TrendingUp size={14} />
-              <span>Growth Assets</span>
+            <div className="flex items-center gap-4">
+              <button className="p-2 text-gray-400 hover:text-white transition-colors relative">
+                <Bell size={20} />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-[#0072d2] rounded-full border-2 border-[#030b17]" />
+              </button>
+              <div className="flex items-center gap-3 bg-white/5 hover:bg-white/10 p-1.5 pr-4 rounded-full border border-white/5 transition-all cursor-pointer">
+                <img src={user.photoURL || ''} alt="Profile" className="w-8 h-8 rounded-full border border-white/10" referrerPolicy="no-referrer" />
+                <span className="text-sm font-medium hidden sm:inline">{user.displayName?.split(' ')[0]}</span>
+              </div>
             </div>
-          </Card>
+          </header>
 
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-red-400">
-              <CreditCard size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Debt</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalDebt)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-red-400 text-xs font-medium">
-              <ArrowDownLeft size={14} />
-              <span>Liabilities</span>
-            </div>
-          </Card>
-
-          <Card className="relative overflow-hidden group border-[#00e5c2]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
-              <Wallet size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Net Cash</p>
-            <h3 className={cn("text-2xl font-bold", netCash >= 0 ? "text-[#00e5c2]" : "text-red-400")}>
-              {formatCurrency(netCash)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2 text-[#e6e8eb]/40 text-xs font-medium">
-              <ArrowUpRight size={14} />
-              <span>Cash - Debt</span>
-            </div>
-          </Card>
-
-          <Card className="bg-[#00e5c2] text-[#0f1115] border-none shadow-2xl shadow-[#00e5c2]/20">
-            <p className="text-sm font-bold uppercase tracking-wider mb-1 opacity-60">Net Worth</p>
-            <h3 className="text-3xl font-black">{formatCurrency(netWorth)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-[#0f1115]/60 text-xs font-bold">
-              <TrendingUp size={14} />
-              <span>Financial Health</span>
-            </div>
-          </Card>
-        </section>
-
-        {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#00e5c2]/10 rounded-lg">
-                  <BarChart3 size={20} className="text-[#00e5c2]" />
+          <main className="pb-20">
+            {activeTab === 'dashboard' ? (
+              <div className="animate-in fade-in duration-700">
+                <div className="px-4 md:px-8">
+                  <HeroBanner netWorth={netWorth} user={user} />
                 </div>
-                <div>
-                  <h3 className="font-bold text-lg text-[#e6e8eb]">Asset Overview</h3>
-                  <p className="text-xs text-[#e6e8eb]/40">Distribution of your liquid and growth assets</p>
-                </div>
-              </div>
-            </div>
-            <div className="h-[320px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={[
-                    { name: 'Cash', value: totalCash, color: '#00e5c2', secondaryColor: '#00b398' },
-                    { name: 'Investments', value: totalInvestments, color: '#8b5cf6', secondaryColor: '#6d28d9' },
-                    { name: 'Debt', value: totalDebt, color: '#f87171', secondaryColor: '#dc2626' },
-                  ]}
-                  margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="barGradientCash" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#00e5c2" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#00e5c2" stopOpacity={0.2}/>
-                    </linearGradient>
-                    <linearGradient id="barGradientInv" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                    </linearGradient>
-                    <linearGradient id="barGradientDebt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f87171" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#f87171" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
-                  <XAxis 
-                    dataKey="name" 
-                    stroke="#e6e8eb" 
-                    opacity={0.3} 
-                    axisLine={false} 
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 500 }}
-                    dy={10}
-                  />
-                  <YAxis hide />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 12 }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
-                            <p className="text-xs font-bold text-[#e6e8eb]/40 uppercase tracking-widest mb-1">{payload[0].payload.name}</p>
-                            <p className="text-lg font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar 
-                    dataKey="value" 
-                    radius={[12, 12, 4, 4]} 
-                    barSize={60}
-                    animationDuration={1500}
-                  >
-                    <LabelList 
-                      dataKey="value" 
-                      position="top" 
-                      formatter={(val: number) => formatCurrency(val)}
-                      style={{ fill: '#e6e8eb', fontSize: 10, fontWeight: 'bold', opacity: 0.6 }}
-                    />
-                    {
-                      [
-                        { name: 'Cash', gradient: 'url(#barGradientCash)' },
-                        { name: 'Investments', gradient: 'url(#barGradientInv)' },
-                        { name: 'Debt', gradient: 'url(#barGradientDebt)' },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.gradient} />
-                      ))
-                    }
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
 
-          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-purple-500/10 rounded-lg">
-                <PieChartIcon size={20} className="text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-[#e6e8eb]">Allocation</h3>
-                <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
-              </div>
-            </div>
-            <div className="h-[280px] w-full relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <defs>
-                    {assetAllocationData.map((entry, index) => (
-                      <linearGradient key={`grad-${index}`} id={`pieGrad-${index}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
-                        <stop offset="100%" stopColor={entry.color} stopOpacity={0.6}/>
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <Pie
-                    data={assetAllocationData}
-                    innerRadius={75}
-                    outerRadius={100}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                    animationBegin={0}
-                    animationDuration={1800}
-                  >
-                    {assetAllocationData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={`url(#pieGrad-${index})`}
-                        style={{ filter: `drop-shadow(0 0 8px ${entry.color}44)` }}
+                {/* Rows */}
+                {accounts.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase())).length > 0 && (
+                  <ContentRow title="Aset Likuid">
+                    {accounts.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase())).map(account => (
+                      <ContentCard 
+                        key={account.id}
+                        title={account.name}
+                        subtitle="Akun Kas"
+                        value={formatCurrency(account.balance)}
+                        color="#0072d2"
+                        icon={Wallet}
+                        onEdit={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
+                        onDelete={() => deleteItem('accounts', account.id)}
+                        imageUrl={`https://picsum.photos/seed/bank-${account.name}/400/250`}
                       />
                     ))}
-                  </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-3 rounded-xl shadow-2xl backdrop-blur-xl">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.color }} />
-                              <p className="text-[10px] font-bold text-[#e6e8eb]/40 uppercase tracking-widest">{payload[0].name}</p>
-                            </div>
-                            <p className="text-sm font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
-              {assetAllocationData.slice(0, 4).map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] font-medium text-[#e6e8eb]/60 truncate">{item.name}</span>
-                  </div>
-                  <span className="text-[10px] font-bold text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </section>
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }}
+                      className="flex-shrink-0 w-64 h-40 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-[#0072d2] hover:border-[#0072d2]/30 transition-all cursor-pointer group"
+                    >
+                      <Plus size={32} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Tambah Akun</span>
+                    </motion.div>
+                  </ContentRow>
+                )}
 
-        {/* Data Tables */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Cash Accounts */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <Wallet size={18} className="text-[#00e5c2]" /> Cash Accounts
-              </h3>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
-                className="py-1.5 px-3 text-xs rounded-lg"
-              >
-                <Plus size={14} /> Add
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {accounts.map(account => (
-                <div key={account.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-[#00e5c2]/50 transition-all">
-                  <div>
-                    <p className="font-medium">{account.name}</p>
-                    <p className="text-lg font-bold text-[#00e5c2]">{formatCurrency(account.balance)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
+                {investments.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).length > 0 && (
+                  <ContentRow title="Aset Pertumbuhan">
+                    {investments.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(inv => (
+                      <ContentCard 
+                        key={inv.id}
+                        title={inv.name}
+                        subtitle={inv.category}
+                        value={formatCurrency(inv.value)}
+                        color="#0072d2"
+                        icon={TrendingUp}
+                        onEdit={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
+                        onDelete={() => deleteItem('investments', inv.id)}
+                        imageUrl={`https://picsum.photos/seed/invest-${inv.name}/400/250`}
+                      />
+                    ))}
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }}
+                      className="flex-shrink-0 w-64 h-40 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-[#0072d2] hover:border-[#0072d2]/30 transition-all cursor-pointer group"
                     >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('accounts', account.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {accounts.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No accounts added</p>}
-            </div>
-          </Card>
+                      <Plus size={32} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Tambah Investasi</span>
+                    </motion.div>
+                  </ContentRow>
+                )}
 
-          {/* Investments */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <TrendingUp size={18} className="text-purple-400" /> Investments
-              </h3>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
-                variant="secondary"
-                className="py-1.5 px-3 text-xs rounded-lg"
-              >
-                <Plus size={14} /> Add
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {investments.map(inv => (
-                <div key={inv.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-purple-400/50 transition-all">
-                  <div>
-                    <p className="font-medium">{inv.name}</p>
-                    <p className="text-xs text-[#e6e8eb]/40">{inv.category}</p>
-                    <p className="text-lg font-bold text-purple-400">{formatCurrency(inv.value)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-purple-400 transition-colors"
+                {liabilities.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase())).length > 0 && (
+                  <ContentRow title="Liabilitas">
+                    {liabilities.filter(l => l.name.toLowerCase().includes(searchTerm.toLowerCase())).map(debt => (
+                      <ContentCard 
+                        key={debt.id}
+                        title={debt.name}
+                        subtitle="Hutang"
+                        value={formatCurrency(debt.amount)}
+                        color="#f87171"
+                        icon={CreditCard}
+                        onEdit={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
+                        onDelete={() => deleteItem('liabilities', debt.id)}
+                        imageUrl={`https://picsum.photos/seed/debt-${debt.name}/400/250`}
+                      />
+                    ))}
+                    <motion.div
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }}
+                      className="flex-shrink-0 w-64 h-40 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-red-400 hover:border-red-400/30 transition-all cursor-pointer group"
                     >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('investments', inv.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {investments.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No investments added</p>}
-            </div>
-          </Card>
+                      <Plus size={32} className="group-hover:scale-110 transition-transform" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Tambah Liabilitas</span>
+                    </motion.div>
+                  </ContentRow>
+                )}
 
-          {/* Liabilities */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <CreditCard size={18} className="text-red-400" /> Liabilities
-              </h3>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
-                variant="secondary"
-                className="py-1.5 px-3 text-xs rounded-lg"
-              >
-                <Plus size={14} /> Add
-              </Button>
-            </div>
-            <div className="space-y-4">
-              {liabilities.map(debt => (
-                <div key={debt.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-red-400/50 transition-all">
-                  <div>
-                    <p className="font-medium">{debt.name}</p>
-                    <p className="text-lg font-bold text-red-400">{formatCurrency(debt.amount)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('liabilities', debt.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {liabilities.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No liabilities added</p>}
-            </div>
-          </Card>
-        </div>
+                <ContentRow title="Aktivitas Terakhir">
+                  {transactions
+                    .filter(t => 
+                      (t.notes || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      t.type.toLowerCase().includes(searchTerm.toLowerCase())
+                    )
+                    .map(t => (
+                      <ContentCard 
+                        key={t.id}
+                        title={t.notes || t.type.replace('_', ' ')}
+                        subtitle={new Date(t.date).toLocaleDateString()}
+                        value={`${(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? '+' : '-'}${formatCurrency(t.amount)}`}
+                        color={(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? '#10b981' : '#f87171'}
+                        icon={(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? ArrowUpRight : ArrowDownLeft}
+                        onEdit={() => { 
+                          setEditingItem(t); 
+                          setSelectedTransactionType(t.type);
+                          setSelectedAccountId(t.accountId);
+                          setIsTransactionModalOpen(true); 
+                        }}
+                        onDelete={() => deleteTransaction(t)}
+                        imageUrl={`https://picsum.photos/seed/trans-${t.id}/400/250`}
+                      />
+                    ))}
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    onClick={() => { setIsTransactionModalOpen(true); setSelectedTransactionType('expense'); }}
+                    className="flex-shrink-0 w-64 h-40 rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center gap-2 text-white/20 hover:text-[#0072d2] hover:border-[#0072d2]/30 transition-all cursor-pointer group"
+                  >
+                    <Plus size={32} className="group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold uppercase tracking-widest">Transaksi Baru</span>
+                  </motion.div>
+                </ContentRow>
 
-        {/* Transactions History */}
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <History size={18} className="text-[#00e5c2]" /> Recent Transactions
-            </h3>
-            <div className="flex items-center gap-3">
-              {accounts.length === 0 && (
-                <Button onClick={seedData} variant="ghost" className="text-xs opacity-50">
-                  Load Sample Data
-                </Button>
-              )}
-              <Button 
-                onClick={() => { setIsTransactionModalOpen(true); setSelectedTransactionType('expense'); }} 
-                variant="primary" 
-                className="bg-white text-black hover:bg-gray-200 py-1.5 px-3 text-xs rounded-lg"
-              >
-                <History size={14} /> New Transaction
-              </Button>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-[#e6e8eb]/40 text-sm border-b border-[#2a2e36]">
-                  <th className="pb-4 font-medium">Date</th>
-                  <th className="pb-4 font-medium">Type</th>
-                  <th className="pb-4 font-medium">Account</th>
-                  <th className="pb-4 font-medium">Amount</th>
-                  <th className="pb-4 font-medium">Notes</th>
-                  <th className="pb-4 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#2a2e36]">
-                {transactions.map(t => (
-                  <tr key={t.id} className="text-sm group">
-                    <td className="py-4 text-[#e6e8eb]/60">{new Date(t.date).toLocaleDateString()}</td>
-                    <td className="py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-md text-[10px] font-bold uppercase",
-                        t.type === 'income' ? "bg-green-500/10 text-green-500" :
-                        t.type === 'expense' ? "bg-red-500/10 text-red-500" :
-                        t.type === 'investment_deposit' ? "bg-purple-500/10 text-purple-500" :
-                        t.type === 'investment_withdrawal' ? "bg-orange-500/10 text-orange-500" :
-                        t.type === 'debt_payment' ? "bg-blue-500/10 text-blue-500" :
-                        t.type === 'debt_expense' ? "bg-red-500/10 text-red-500" :
-                        "bg-gray-500/10 text-gray-500"
-                      )}>
-                        {t.type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-4 font-medium">
-                      {accounts.find(a => a.id === t.accountId)?.name || 
-                       investments.find(i => i.id === t.accountId)?.name || 
-                       liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
-                    </td>
-                    <td className={cn(
-                      "py-4 font-bold", 
-                      (t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? "text-green-500" : "text-red-500"
-                    )}>
-                      {(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? '+' : '-'}{formatCurrency(t.amount)}
-                    </td>
-                    <td className="py-4 text-[#e6e8eb]/40">{t.notes}</td>
-                    <td className="py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={() => { 
-                            setEditingItem(t); 
-                            setSelectedTransactionType(t.type);
-                            setSelectedAccountId(t.accountId);
-                            setIsTransactionModalOpen(true); 
-                          }}
-                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => deleteTransaction(t)}
-                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {transactions.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No transactions yet</p>}
-          </div>
-        </Card>
-        </>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-[#e6e8eb]">Banking & E-Wallet Information</h2>
-                <p className="text-[#e6e8eb]/40">Manage your account numbers and phone numbers for easy access</p>
+                <ContentRow title="Wawasan Tren">
+                  {[
+                    { title: 'Lonjakan Pasar Bullish', desc: 'Pasar kripto sedang melonjak', color: '#0072d2', icon: TrendingUp, seed: 'crypto' },
+                    { title: 'Emas vs Saham', desc: 'Mana yang lebih baik untuk 2026?', color: '#fbbf24', icon: TrendingUp, seed: 'gold' },
+                    { title: 'Manajemen Hutang', desc: 'Tips melunasi kartu kredit Anda', color: '#f87171', icon: CreditCard, seed: 'debt' },
+                    { title: 'Gaya Hidup Mewah', desc: 'Merencanakan pembelian besar Anda berikutnya', color: '#0072d2', icon: Wallet, seed: 'luxury' }
+                  ]
+                  .filter(insight => 
+                    insight.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                    insight.desc.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((insight, idx) => (
+                    <ContentCard 
+                      key={idx}
+                      title={insight.title}
+                      subtitle="Market Insight"
+                      value={insight.desc}
+                      color={insight.color}
+                      icon={insight.icon}
+                      imageUrl={`https://picsum.photos/seed/insight-${insight.seed}/400/250`}
+                    />
+                  ))}
+                </ContentRow>
               </div>
-              <Button onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}>
-                <Plus size={18} /> Add Information
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {information.map((info) => (
-                <Card 
-                  key={info.id} 
-                  onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
-                  className={cn(
-                    "relative group hover:border-[#00e5c2]/30 transition-all cursor-pointer",
-                    selectedInfoId === info.id ? "border-[#00e5c2]/50 ring-1 ring-[#00e5c2]/20" : ""
-                  )}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "p-3 rounded-xl",
-                        info.type === 'bank' ? "bg-blue-500/10 text-blue-500" : 
-                        info.type === 'ewallet' ? "bg-[#00e5c2]/10 text-[#00e5c2]" :
-                        info.type === 'crypto' ? "bg-orange-500/10 text-orange-500" :
-                        "bg-purple-500/10 text-purple-500"
-                      )}>
-                        {info.type === 'bank' ? <Wallet size={24} /> : 
-                         info.type === 'ewallet' ? <TrendingUp size={24} /> :
-                         info.type === 'crypto' ? <TrendingUp size={24} /> :
-                         <LayoutDashboard size={24} />}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg">{info.provider}</h4>
-                        <p className="text-xs text-[#e6e8eb]/40 uppercase tracking-widest">{info.type}</p>
-                      </div>
-                    </div>
-                    <AnimatePresence>
-                      {selectedInfoId === info.id && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                          animate={{ opacity: 1, scale: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                          className="flex items-center gap-1"
-                        >
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
-                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] border border-white/10 transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, `users/${user.uid}/information`, info.id)); }}
-                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-red-400 border border-white/10 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+            ) : (
+              <div className="animate-in slide-in-from-right duration-500">
+                <div className="px-8 mb-8 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-3xl font-black text-white tracking-tighter">Pusat Informasi</h2>
+                    <p className="text-gray-500">Akses cepat ke detail akun Anda</p>
                   </div>
-
-                  <div className="space-y-4">
-                    <div className="bg-[#0f1115] p-4 rounded-xl border border-[#2a2e36] relative group/item">
-                      <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Number / Phone</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-mono font-medium tracking-wider">{info.accountNumber}</span>
-                        <CopyButton text={info.accountNumber} />
-                      </div>
-                    </div>
-
-                    {info.accountName && (
-                      <div>
-                        <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Name</p>
-                        <p className="text-sm font-medium">{info.accountName}</p>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-              {information.length === 0 && (
-                <div className="col-span-full py-20 text-center">
-                  <div className="w-20 h-20 bg-[#1a1d23] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#2a2e36]">
-                    <Info size={32} className="text-[#e6e8eb]/20" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#e6e8eb]/60">No information stored</h3>
-                  <p className="text-sm text-[#e6e8eb]/40">Add your bank accounts or e-wallets to get started</p>
+                  <Button onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }} className="bg-[#0072d2] text-white font-bold">
+                    <Plus size={20} /> Tambah Informasi
+                  </Button>
                 </div>
-              )}
-            </div>
-          </div>
-        )}
-      </main>
+
+                {['bank', 'ewallet', 'crypto', 'rdn'].map(type => {
+                  const items = information.filter(info => 
+                    info.type === type && 
+                    (info.provider.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                     info.accountName?.toLowerCase().includes(searchTerm.toLowerCase()))
+                  );
+                  if (items.length === 0) return null;
+                  
+                  return (
+                    <ContentRow key={type} title={type === 'bank' ? 'Akun Bank' : type === 'ewallet' ? 'E-Wallet' : type === 'crypto' ? 'Dompet Kripto' : 'Akun RDN'}>
+                      {items.map(info => (
+                        <ContentCard 
+                          key={info.id}
+                          title={info.provider}
+                          subtitle={info.accountName || 'Akun'}
+                          value={info.accountNumber}
+                          color="#0072d2"
+                          icon={type === 'bank' ? Wallet : type === 'ewallet' ? TrendingUp : CreditCard}
+                          onEdit={() => { setEditingItem(info); setIsInformationModalOpen(true); }}
+                          onDelete={() => deleteDoc(doc(db, `users/${user.uid}/information`, info.id))}
+                          imageUrl={`https://picsum.photos/seed/info-${info.provider}/400/250`}
+                        />
+                      ))}
+                    </ContentRow>
+                  );
+                })}
+
+                {information.length === 0 && (
+                  <div className="text-center py-20">
+                    <Info size={64} className="mx-auto mb-4 text-white/10" />
+                    <p className="text-gray-500">Tidak ada catatan informasi ditemukan</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </main>
+        </div>
 
       {/* Modals */}
       <Modal 
         isOpen={isAccountModalOpen} 
         onClose={() => setIsAccountModalOpen(false)} 
-        title={editingItem ? "Edit Asset" : "Add Asset"}
+        title={editingItem ? "Edit Aset" : "Tambah Aset"}
       >
         <form onSubmit={handleAddAccount} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Name</label>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nama Akun</label>
             <input 
               name="name" 
               defaultValue={editingItem?.name}
               required 
-              placeholder="e.g. BCA, BRI, Cash"
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2] transition-colors"
+              placeholder="misal: BCA, BRI, Tunai"
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2] transition-colors"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Balance (IDR)</label>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Saldo (IDR)</label>
             <input 
               name="balance" 
               type="number" 
               defaultValue={editingItem?.balance}
               required 
               placeholder="0"
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2] transition-colors"
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2] transition-colors"
             />
           </div>
-          <Button className="w-full py-4 mt-4">Save Account</Button>
+          <Button className="w-full py-4 mt-4">Simpan Akun</Button>
         </form>
       </Modal>
 
       <Modal 
         isOpen={isInvestmentModalOpen} 
         onClose={() => setIsInvestmentModalOpen(false)} 
-        title={editingItem ? "Edit Investment" : "Add Investment"}
+        title={editingItem ? "Edit Investasi" : "Tambah Investasi"}
       >
         <form onSubmit={handleAddInvestment} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Investment Name</label>
-            <input name="name" defaultValue={editingItem?.name} required placeholder="e.g. Gold, SBN" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nama Investasi</label>
+            <input name="name" defaultValue={editingItem?.name} required placeholder="misal: Emas, SBN" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Category</label>
-            <select name="category" defaultValue={editingItem?.category || 'Stocks'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
-              <option>Gold</option>
-              <option>Stocks</option>
-              <option>Mutual Funds</option>
-              <option>Bank Interest</option>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Kategori</label>
+            <select name="category" defaultValue={editingItem?.category || 'Saham'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]">
+              <option>Emas</option>
+              <option>Saham</option>
+              <option>Reksa Dana</option>
+              <option>Bunga Bank</option>
               <option>Deposito</option>
-              <option>Crypto</option>
+              <option>Kripto</option>
               <option>Valas</option>
-              <option>Others</option>
+              <option>Lainnya</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Value (IDR)</label>
-            <input name="value" type="number" defaultValue={editingItem?.value} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nilai (IDR)</label>
+            <input name="value" type="number" defaultValue={editingItem?.value} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
-          <Button className="w-full py-4 mt-4">Save Investment</Button>
+          <Button className="w-full py-4 mt-4">Simpan Investasi</Button>
         </form>
       </Modal>
 
       <Modal 
         isOpen={isLiabilityModalOpen} 
         onClose={() => setIsLiabilityModalOpen(false)} 
-        title={editingItem ? "Edit Liability" : "Add Liability"}
+        title={editingItem ? "Edit Liabilitas" : "Tambah Liabilitas"}
       >
         <form onSubmit={handleAddLiability} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Debt Name</label>
-            <input name="name" defaultValue={editingItem?.name} required placeholder="e.g. Credit Card" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nama Hutang</label>
+            <input name="name" defaultValue={editingItem?.name} required placeholder="misal: Kartu Kredit" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount Owed (IDR)</label>
-            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Jumlah Hutang (IDR)</label>
+            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
-          <Button className="w-full py-4 mt-4">Save Liability</Button>
+          <Button className="w-full py-4 mt-4">Simpan Liabilitas</Button>
         </form>
       </Modal>
 
@@ -1506,11 +1398,11 @@ export default function App() {
           setEditingItem(null);
           setSelectedAccountId('');
         }} 
-        title={editingItem ? "Edit Transaction" : "New Transaction"}
+        title={editingItem ? "Edit Transaksi" : "Transaksi Baru"}
       >
         <form onSubmit={handleAddTransaction} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Transaction Type</label>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Tipe Transaksi</label>
             <select 
               name="type" 
               value={selectedTransactionType}
@@ -1518,61 +1410,61 @@ export default function App() {
                 setSelectedTransactionType(e.target.value);
                 setSelectedAccountId(''); // Reset account when type changes
               }}
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]"
             >
-              <option value="income">Income (Add to Cash)</option>
-              <option value="expense">Expense (Spend from Cash)</option>
-              <option value="investment_deposit">Investment Deposit</option>
-              <option value="investment_withdrawal">Investment Withdrawal</option>
-              <option value="debt_payment">Debt Payment (Reduce Debt)</option>
-              <option value="debt_expense">Debt Expense (Increase Debt)</option>
+              <option value="income">Pemasukan (Tambah ke Kas)</option>
+              <option value="expense">Pengeluaran (Ambil dari Kas)</option>
+              <option value="investment_deposit">Setoran Investasi</option>
+              <option value="investment_withdrawal">Penarikan Investasi</option>
+              <option value="debt_payment">Pembayaran Hutang (Kurangi Hutang)</option>
+              <option value="debt_expense">Beban Hutang (Tambah Hutang)</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Target Account</label>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Akun Target</label>
             <select 
               name="accountId" 
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
               required
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]"
             >
-              <option value="" disabled>Select an account</option>
+              <option value="" disabled>Pilih akun</option>
               {(selectedTransactionType === 'income' || selectedTransactionType === 'expense') && (
-                <optgroup label="Cash Accounts">
+                <optgroup label="Akun Kas">
                   {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </optgroup>
               )}
               {(selectedTransactionType === 'investment_deposit' || selectedTransactionType === 'investment_withdrawal') && (
-                <optgroup label="Investments">
+                <optgroup label="Investasi">
                   {investments.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                 </optgroup>
               )}
               {(selectedTransactionType === 'debt_payment' || selectedTransactionType === 'debt_expense') && (
-                <optgroup label="Liabilities">
+                <optgroup label="Liabilitas">
                   {liabilities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </optgroup>
               )}
             </select>
             {((selectedTransactionType === 'income' || selectedTransactionType === 'expense') && accounts.length === 0) && (
-              <p className="text-xs text-red-400 mt-1">No cash accounts found. Please add one first.</p>
+              <p className="text-xs text-red-400 mt-1">Akun kas tidak ditemukan. Silakan tambahkan terlebih dahulu.</p>
             )}
             {((selectedTransactionType === 'investment_deposit' || selectedTransactionType === 'investment_withdrawal') && investments.length === 0) && (
-              <p className="text-xs text-red-400 mt-1">No investments found. Please add one first.</p>
+              <p className="text-xs text-red-400 mt-1">Investasi tidak ditemukan. Silakan tambahkan terlebih dahulu.</p>
             )}
             {((selectedTransactionType === 'debt_payment' || selectedTransactionType === 'debt_expense') && liabilities.length === 0) && (
-              <p className="text-xs text-red-400 mt-1">No liabilities found. Please add one first.</p>
+              <p className="text-xs text-red-400 mt-1">Liabilitas tidak ditemukan. Silakan tambahkan terlebih dahulu.</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount (IDR)</label>
-            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Jumlah (IDR)</label>
+            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Notes</label>
-            <input name="notes" defaultValue={editingItem?.notes} placeholder="Optional notes" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Catatan</label>
+            <input name="notes" defaultValue={editingItem?.notes} placeholder="Catatan opsional" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
-          <Button className="w-full py-4 mt-4">{editingItem ? "Update Transaction" : "Record Transaction"}</Button>
+          <Button className="w-full py-4 mt-4">{editingItem ? "Perbarui Transaksi" : "Catat Transaksi"}</Button>
         </form>
       </Modal>
 
@@ -1582,31 +1474,31 @@ export default function App() {
           setIsInformationModalOpen(false); 
           setEditingItem(null);
         }} 
-        title={editingItem ? "Edit Information" : "Add Information"}
+        title={editingItem ? "Edit Informasi" : "Tambah Informasi"}
       >
         <form onSubmit={handleAddInformation} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Type</label>
-            <select name="type" defaultValue={editingItem?.type || 'bank'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
-              <option value="bank">Bank Account</option>
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Tipe</label>
+            <select name="type" defaultValue={editingItem?.type || 'bank'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]">
+              <option value="bank">Akun Bank</option>
               <option value="ewallet">E-Wallet</option>
-              <option value="crypto">Crypto Wallet</option>
-              <option value="rdn">RDN Account</option>
+              <option value="crypto">Dompet Kripto</option>
+              <option value="rdn">Akun RDN</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Provider Name</label>
-            <input name="provider" defaultValue={editingItem?.provider} required placeholder="e.g. BCA, Mandiri, GoPay, OVO" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nama Penyedia</label>
+            <input name="provider" defaultValue={editingItem?.provider} required placeholder="misal: BCA, Mandiri, GoPay, OVO" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Number / Phone</label>
-            <input name="accountNumber" defaultValue={editingItem?.accountNumber} required placeholder="e.g. 1234567890" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nomor Akun / Telepon</label>
+            <input name="accountNumber" defaultValue={editingItem?.accountNumber} required placeholder="e.g. 1234567890" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Name</label>
-            <input name="accountName" defaultValue={editingItem?.accountName} placeholder="e.g. John Doe" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Nama Akun</label>
+            <input name="accountName" defaultValue={editingItem?.accountName} placeholder="misal: John Doe" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#0072d2]" />
           </div>
-          <Button className="w-full py-4 mt-4">Save Information</Button>
+          <Button className="w-full py-4 mt-4">Simpan Informasi</Button>
         </form>
       </Modal>
 
@@ -1617,27 +1509,27 @@ export default function App() {
           setItemToDelete(null);
           setDeleteCollection('');
         }} 
-        title="Confirm Deletion"
+        title="Konfirmasi Penghapusan"
       >
         <div className="space-y-6">
           <p className="text-[#e6e8eb]/60">
             {deleteCollection === 'transactions' 
-              ? "Are you sure you want to delete this transaction? This action will also automatically reverse the balance change on the associated account."
-              : "Are you sure you want to delete this item? This action cannot be undone."}
+              ? "Apakah Anda yakin ingin menghapus transaksi ini? Tindakan ini juga akan secara otomatis membatalkan perubahan saldo pada akun terkait."
+              : "Apakah Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan."}
           </p>
           <div className="flex gap-3">
             <Button onClick={() => setIsDeleteConfirmOpen(false)} variant="secondary" className="flex-1">
-              Cancel
+              Batal
             </Button>
             <Button onClick={confirmDelete} variant="danger" className="flex-1">
-              Delete
+              Hapus
             </Button>
           </div>
         </div>
       </Modal>
 
       <footer className="max-w-7xl mx-auto px-4 py-12 text-center text-[#e6e8eb]/20 text-sm">
-        <p>&copy; 2026 LuxWealth Tracker. All rights reserved.</p>
+        <p>&copy; 2026 LuxWealth Tracker. Hak cipta dilindungi undang-undang.</p>
       </footer>
 
       <AnimatePresence>
