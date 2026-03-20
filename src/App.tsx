@@ -13,7 +13,8 @@ import {
   increment,
   Timestamp,
   orderBy,
-  limit
+  limit,
+  writeBatch
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, signInWithGoogle, signInWithApple, logout } from './firebase';
@@ -38,7 +39,8 @@ import {
   Check,
   LayoutDashboard,
   Info,
-  Database
+  Database,
+  RefreshCcw
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -300,6 +302,7 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isInformationModalOpen, setIsInformationModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
@@ -696,6 +699,29 @@ export default function App() {
     }
   };
 
+  const clearAllData = async () => {
+    if (!user) return;
+    
+    try {
+      const batch = writeBatch(db);
+      
+      // Add all items to batch
+      accounts.forEach(item => batch.delete(doc(db, `users/${user.uid}/accounts`, item.id)));
+      investments.forEach(item => batch.delete(doc(db, `users/${user.uid}/investments`, item.id)));
+      liabilities.forEach(item => batch.delete(doc(db, `users/${user.uid}/liabilities`, item.id)));
+      transactions.forEach(item => batch.delete(doc(db, `users/${user.uid}/transactions`, item.id)));
+      information.forEach(item => batch.delete(doc(db, `users/${user.uid}/information`, item.id)));
+      
+      await batch.commit();
+      
+      setIsClearAllConfirmOpen(false);
+      setNotification({ message: 'All data cleared successfully', type: 'success' });
+    } catch (err) {
+      console.error("Error clearing data:", err);
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}`);
+    }
+  };
+
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
@@ -880,6 +906,13 @@ export default function App() {
                   alt="Avatar"
                   referrerPolicy="no-referrer"
                 />
+                <button 
+                  onClick={() => setIsClearAllConfirmOpen(true)}
+                  className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-orange-400"
+                  title="Clear All Data"
+                >
+                  <RefreshCcw size={20} />
+                </button>
                 <button 
                   onClick={() => logout()}
                   className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-red-400"
@@ -1823,6 +1856,37 @@ export default function App() {
               className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all active:scale-[0.98]"
             >
               Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal 
+        isOpen={isClearAllConfirmOpen} 
+        onClose={() => setIsClearAllConfirmOpen(false)} 
+        title="Clear All Data"
+      >
+        <div className="space-y-6">
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-white/80 text-center leading-relaxed font-bold">
+              WARNING: This will permanently delete ALL your accounts, investments, liabilities, and transactions.
+            </p>
+            <p className="text-white/60 text-center text-xs mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => setIsClearAllConfirmOpen(false)} 
+              className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={clearAllData} 
+              className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all active:scale-[0.98]"
+            >
+              Clear Everything
             </Button>
           </div>
         </div>
