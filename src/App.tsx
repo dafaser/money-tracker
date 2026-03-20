@@ -37,7 +37,8 @@ import {
   Copy,
   Check,
   LayoutDashboard,
-  Info
+  Info,
+  Database
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -50,7 +51,8 @@ import {
   YAxis, 
   Tooltip, 
   Legend,
-  LabelList
+  LabelList,
+  CartesianGrid
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -145,12 +147,15 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 // --- Components ---
 
 const Card = ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) => (
-  <div 
+  <motion.div 
+    whileHover={onClick ? { scale: 1.01, y: -2 } : {}}
     onClick={onClick}
-    className={cn("bg-[#1a1d23] border border-[#2a2e36] rounded-2xl p-6 shadow-xl", className)}
+    className={cn("bg-luxury-card border border-luxury-border rounded-3xl p-6 shadow-2xl relative overflow-hidden group", className)}
   >
-    {children}
-  </div>
+    {/* Subtle inner glow */}
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+    <div className="relative z-10">{children}</div>
+  </motion.div>
 );
 
 const Button = ({ 
@@ -167,26 +172,39 @@ const Button = ({
   disabled?: boolean;
 }) => {
   const variants = {
-    primary: "bg-[#00e5c2] text-[#0f1115] hover:bg-[#00c9ab]",
-    secondary: "bg-[#2a2e36] text-[#e6e8eb] hover:bg-[#353a44]",
+    primary: "bg-luxury-accent text-black hover:brightness-110 shadow-lg shadow-luxury-accent/20",
+    secondary: "bg-white/5 text-white hover:bg-white/10 border border-white/10",
     danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/20",
-    ghost: "bg-transparent text-[#e6e8eb] hover:bg-[#2a2e36]"
+    ghost: "bg-transparent text-white/60 hover:text-white hover:bg-white/5"
   };
 
   return (
-    <button 
+    <motion.button 
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
       onClick={onClick} 
       disabled={disabled}
       className={cn(
-        "px-4 py-2 rounded-xl font-medium transition-all active:scale-95 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2", 
+        "px-6 py-3 rounded-2xl font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2", 
         variants[variant], 
         className
       )}
     >
       {children}
-    </button>
+    </motion.button>
   );
 };
+
+const Background = () => (
+  <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+    <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-luxury-accent/10 rounded-full blur-[120px] animate-pulse" />
+    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '2s' }} />
+    <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] bg-blue-500/5 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '4s' }} />
+    
+    {/* Noise Texture */}
+    <div className="absolute inset-0 opacity-[0.03] mix-blend-overlay pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+  </div>
+);
 
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean; onClose: () => void; title: string; children: React.ReactNode }) => (
   <AnimatePresence>
@@ -288,6 +306,11 @@ export default function App() {
   const [selectedInfoId, setSelectedInfoId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setNotification({ message: 'Copied to clipboard', type: 'success' });
+  };
+
   // Form States
   const [editingItem, setEditingItem] = useState<any>(null);
   const [selectedTransactionType, setSelectedTransactionType] = useState('expense');
@@ -316,27 +339,32 @@ export default function App() {
     const unsubAccounts = onSnapshot(qAccounts, (s) => {
       const data = s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Account));
       setAccounts(data);
-      // Initialize sample data if empty
-      if (data.length === 0 && s.metadata.fromCache === false) {
-        // This is a bit tricky to handle perfectly without multiple renders, 
-        // but for a demo/starter app it works.
-      }
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/accounts`);
     });
 
     const unsubInvestments = onSnapshot(qInvestments, (s) => {
       setInvestments(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Investment)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/investments`);
     });
 
     const unsubLiabilities = onSnapshot(qLiabilities, (s) => {
       setLiabilities(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Liability)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/liabilities`);
     });
 
     const unsubTransactions = onSnapshot(qTransactions, (s) => {
       setTransactions(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/transactions`);
     });
 
     const unsubInformation = onSnapshot(collection(db, `users/${user.uid}/information`), (s) => {
       setInformation(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Information)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/information`);
     });
 
     return () => {
@@ -374,20 +402,24 @@ export default function App() {
     const name = formData.get('name') as string;
     const balance = Number(formData.get('balance'));
 
-    if (editingItem) {
-      await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { name, balance, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Account updated successfully', type: 'success' });
-    } else {
-      await addDoc(collection(db, `users/${user.uid}/accounts`), {
-        userId: user.uid,
-        name,
-        balance,
-        updatedAt: new Date().toISOString()
-      });
-      setNotification({ message: 'Account added successfully', type: 'success' });
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { name, balance, updatedAt: new Date().toISOString() });
+        setNotification({ message: 'Account updated successfully', type: 'success' });
+      } else {
+        await addDoc(collection(db, `users/${user.uid}/accounts`), {
+          userId: user.uid,
+          name,
+          balance,
+          updatedAt: new Date().toISOString()
+        });
+        setNotification({ message: 'Account added successfully', type: 'success' });
+      }
+      setIsAccountModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/accounts`);
     }
-    setIsAccountModalOpen(false);
-    setEditingItem(null);
   };
 
   const handleAddInvestment = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -398,21 +430,25 @@ export default function App() {
     const value = Number(formData.get('value'));
     const category = formData.get('category') as string;
 
-    if (editingItem) {
-      await updateDoc(doc(db, `users/${user.uid}/investments`, editingItem.id), { name, value, category, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Investment updated successfully', type: 'success' });
-    } else {
-      await addDoc(collection(db, `users/${user.uid}/investments`), {
-        userId: user.uid,
-        name,
-        value,
-        category,
-        updatedAt: new Date().toISOString()
-      });
-      setNotification({ message: 'Investment added successfully', type: 'success' });
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/investments`, editingItem.id), { name, value, category, updatedAt: new Date().toISOString() });
+        setNotification({ message: 'Investment updated successfully', type: 'success' });
+      } else {
+        await addDoc(collection(db, `users/${user.uid}/investments`), {
+          userId: user.uid,
+          name,
+          value,
+          category,
+          updatedAt: new Date().toISOString()
+        });
+        setNotification({ message: 'Investment added successfully', type: 'success' });
+      }
+      setIsInvestmentModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/investments`);
     }
-    setIsInvestmentModalOpen(false);
-    setEditingItem(null);
   };
 
   const handleAddLiability = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -422,53 +458,61 @@ export default function App() {
     const name = formData.get('name') as string;
     const amount = Number(formData.get('amount'));
 
-    if (editingItem) {
-      await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { name, amount, updatedAt: new Date().toISOString() });
-      setNotification({ message: 'Liability updated successfully', type: 'success' });
-    } else {
-      await addDoc(collection(db, `users/${user.uid}/liabilities`), {
-        userId: user.uid,
-        name,
-        amount,
-        updatedAt: new Date().toISOString()
-      });
-      setNotification({ message: 'Liability added successfully', type: 'success' });
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { name, amount, updatedAt: new Date().toISOString() });
+        setNotification({ message: 'Liability updated successfully', type: 'success' });
+      } else {
+        await addDoc(collection(db, `users/${user.uid}/liabilities`), {
+          userId: user.uid,
+          name,
+          amount,
+          updatedAt: new Date().toISOString()
+        });
+        setNotification({ message: 'Liability added successfully', type: 'success' });
+      }
+      setIsLiabilityModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/liabilities`);
     }
-    setIsLiabilityModalOpen(false);
-    setEditingItem(null);
   };
 
   const handleAddInformation = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
     const formData = new FormData(e.currentTarget);
-    const type = formData.get('type') as 'bank' | 'ewallet';
+    const type = formData.get('type') as Information['type'];
     const provider = formData.get('provider') as string;
     const accountNumber = formData.get('accountNumber') as string;
     const accountName = formData.get('accountName') as string;
 
-    if (editingItem) {
-      await updateDoc(doc(db, `users/${user.uid}/information`, editingItem.id), { 
-        type, 
-        provider, 
-        accountNumber, 
-        accountName, 
-        updatedAt: new Date().toISOString() 
-      });
-      setNotification({ message: 'Information updated successfully', type: 'success' });
-    } else {
-      await addDoc(collection(db, `users/${user.uid}/information`), {
-        userId: user.uid,
-        type,
-        provider,
-        accountNumber,
-        accountName,
-        updatedAt: new Date().toISOString()
-      });
-      setNotification({ message: 'Information added successfully', type: 'success' });
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/information`, editingItem.id), { 
+          type, 
+          provider, 
+          accountNumber, 
+          accountName, 
+          updatedAt: new Date().toISOString() 
+        });
+        setNotification({ message: 'Information updated successfully', type: 'success' });
+      } else {
+        await addDoc(collection(db, `users/${user.uid}/information`), {
+          userId: user.uid,
+          type,
+          provider,
+          accountNumber,
+          accountName,
+          updatedAt: new Date().toISOString()
+        });
+        setNotification({ message: 'Information added successfully', type: 'success' });
+      }
+      setIsInformationModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/information`);
     }
-    setIsInformationModalOpen(false);
-    setEditingItem(null);
   };
 
   const handleAddTransaction = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -483,7 +527,7 @@ export default function App() {
     const date = editingItem ? (editingItem as Transaction).date : new Date().toISOString();
 
     if (!accountId) {
-      alert('Please select a target account. If the list is empty, add an account first.');
+      setNotification({ message: 'Please select a target account. If the list is empty, add an account first.', type: 'error' });
       return;
     }
 
@@ -562,10 +606,15 @@ export default function App() {
         if (type === 'expense') balanceChange = -amount * multiplier;
         
         if (balanceChange !== 0) {
-          await updateDoc(doc(db, `users/${user.uid}/accounts`, accountId), { 
-            balance: increment(balanceChange),
-            updatedAt: new Date().toISOString()
-          });
+          const path = `users/${user.uid}/accounts/${accountId}`;
+          try {
+            await updateDoc(doc(db, path), { 
+              balance: increment(balanceChange),
+              updatedAt: new Date().toISOString()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          }
         }
       } else if (investment) {
         let valueChange = 0;
@@ -573,10 +622,15 @@ export default function App() {
         if (type === 'investment_withdrawal') valueChange = -amount * multiplier;
 
         if (valueChange !== 0) {
-          await updateDoc(doc(db, `users/${user.uid}/investments`, accountId), { 
-            value: increment(valueChange),
-            updatedAt: new Date().toISOString()
-          });
+          const path = `users/${user.uid}/investments/${accountId}`;
+          try {
+            await updateDoc(doc(db, path), { 
+              value: increment(valueChange),
+              updatedAt: new Date().toISOString()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          }
         }
       } else if (liability) {
         let amountChange = 0;
@@ -584,14 +638,24 @@ export default function App() {
         if (type === 'debt_expense') amountChange = amount * multiplier;
 
         if (amountChange !== 0) {
-          await updateDoc(doc(db, `users/${user.uid}/liabilities`, accountId), { 
-            amount: increment(amountChange),
-            updatedAt: new Date().toISOString()
-          });
+          const path = `users/${user.uid}/liabilities/${accountId}`;
+          try {
+            await updateDoc(doc(db, path), { 
+              amount: increment(amountChange),
+              updatedAt: new Date().toISOString()
+            });
+          } catch (err) {
+            handleFirestoreError(err, OperationType.UPDATE, path);
+          }
         }
       }
     } catch (err) {
-      console.error("Error updating balance:", err);
+      console.error("Error in updateAccountBalance:", err);
+      // We don't necessarily want to crash the whole app if balance update fails, 
+      // but we should log it. handleFirestoreError will throw, which triggers ErrorBoundary.
+      // If we want to be more graceful, we could just setNotification.
+      // But the guidelines say we MUST throw.
+      throw err;
     }
   };
 
@@ -632,49 +696,17 @@ export default function App() {
     }
   };
 
-  const seedData = async () => {
-    if (!user) return;
-    
-    const sampleAccounts = [
-      { name: 'BRI', balance: 650000 },
-      { name: 'BCA', balance: 40000 },
-      { name: 'Mandiri', balance: 100000 },
-      { name: 'Cash', balance: 1300000 }
-    ];
-
-    const sampleInvestments = [
-      { name: 'Gold', value: 500000, category: 'Gold' },
-      { name: 'Mutual Funds', value: 500000, category: 'Mutual Funds' },
-      { name: 'Superbank', value: 1000000, category: 'Bank Interest' }
-    ];
-
-    const sampleLiabilities = [
-      { name: 'Credit Card BRI', amount: 1205237 },
-      { name: 'Credit Card Yup', amount: 2525610 }
-    ];
-
-    for (const a of sampleAccounts) {
-      await addDoc(collection(db, `users/${user.uid}/accounts`), { ...a, userId: user.uid, updatedAt: new Date().toISOString() });
-    }
-    for (const i of sampleInvestments) {
-      await addDoc(collection(db, `users/${user.uid}/investments`), { ...i, userId: user.uid, updatedAt: new Date().toISOString() });
-    }
-    for (const l of sampleLiabilities) {
-      await addDoc(collection(db, `users/${user.uid}/liabilities`), { ...l, userId: user.uid, updatedAt: new Date().toISOString() });
-    }
-  };
-
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
     } catch (error: any) {
       console.error("Login Error:", error);
       if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+        setNotification({ message: "This domain is not authorized in Firebase Console. Please add it to 'Authorized Domains'.", type: 'error' });
       } else if (error.code === 'auth/popup-blocked') {
-        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+        setNotification({ message: "Login popup was blocked by your browser. Please allow popups for this site.", type: 'error' });
       } else {
-        alert("Gagal login: " + error.message);
+        setNotification({ message: "Login failed: " + error.message, type: 'error' });
       }
     }
   };
@@ -685,68 +717,49 @@ export default function App() {
     } catch (error: any) {
       console.error("Apple Login Error:", error);
       if (error.code === 'auth/unauthorized-domain') {
-        alert("Domain ini belum terdaftar di Firebase Console. Silakan tambahkan domain Netlify Anda ke 'Authorized Domains' di Firebase.");
+        setNotification({ message: "This domain is not authorized in Firebase Console. Please add it to 'Authorized Domains'.", type: 'error' });
       } else if (error.code === 'auth/popup-blocked') {
-        alert("Popup login diblokir oleh browser. Silakan izinkan popup untuk situs ini.");
+        setNotification({ message: "Login popup was blocked by your browser. Please allow popups for this site.", type: 'error' });
       } else {
-        alert("Gagal login Apple: " + error.message);
+        setNotification({ message: "Apple login failed: " + error.message, type: 'error' });
       }
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#00e5c2] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-luxury-bg flex items-center justify-center relative overflow-hidden">
+        <Background />
+        <div className="relative">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 border-2 border-luxury-accent/20 border-t-luxury-accent rounded-full"
+          />
+          <motion.div 
+            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.6, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute inset-0 bg-luxury-accent rounded-full blur-xl"
+          />
+        </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0f1115] flex items-center justify-center p-4 relative overflow-hidden">
-        {/* Luxury Background Animation */}
-        <div className="absolute inset-0 z-0">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-              opacity: [0.1, 0.2, 0.1]
-            }}
-            transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-[#00e5c2]/20 to-transparent rounded-full blur-[120px]"
+      <div className="min-h-screen bg-luxury-bg flex items-center justify-center p-4 relative overflow-hidden">
+        <Background />
+        
+        {/* Hero Image Background (Subtle) */}
+        <div className="absolute inset-0 z-0 opacity-20">
+          <img 
+            src="https://images.unsplash.com/photo-1639762681485-074b7f938ba0?q=80&w=2832&auto=format&fit=crop" 
+            className="w-full h-full object-cover grayscale"
+            alt="Background"
+            referrerPolicy="no-referrer"
           />
-          <motion.div 
-            animate={{ 
-              scale: [1.2, 1, 1.2],
-              rotate: [90, 0, 90],
-              opacity: [0.1, 0.15, 0.1]
-            }}
-            transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-            className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-purple-500/20 to-transparent rounded-full blur-[120px]"
-          />
-          
-          {/* Floating Particles */}
-          {[...Array(20)].map((_, i) => (
-            <motion.div
-              key={i}
-              initial={{ 
-                x: Math.random() * window.innerWidth, 
-                y: Math.random() * window.innerHeight,
-                opacity: Math.random() * 0.5
-              }}
-              animate={{ 
-                y: [null, Math.random() * -100 - 50],
-                opacity: [null, 0]
-              }}
-              transition={{ 
-                duration: Math.random() * 5 + 5, 
-                repeat: Infinity, 
-                ease: "linear" 
-              }}
-              className="absolute w-1 h-1 bg-white rounded-full"
-            />
-          ))}
+          <div className="absolute inset-0 bg-gradient-to-t from-luxury-bg via-luxury-bg/80 to-transparent" />
         </div>
 
         <motion.div 
@@ -757,16 +770,16 @@ export default function App() {
         >
           <motion.div 
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-24 h-24 bg-gradient-to-br from-[#00e5c2] to-[#00c9ab] rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-[#00e5c2]/30"
+            className="w-24 h-24 bg-gradient-to-br from-luxury-accent to-[#00c9ab] rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-2xl shadow-luxury-accent/30"
           >
-            <TrendingUp size={48} className="text-[#0f1115]" />
+            <TrendingUp size={48} className="text-black" />
           </motion.div>
           
           <motion.h1 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="text-5xl font-black text-[#e6e8eb] mb-4 tracking-tighter"
+            className="text-6xl font-display font-black text-white mb-4 tracking-tighter"
           >
             LuxWealth
           </motion.h1>
@@ -775,9 +788,9 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="text-[#e6e8eb]/50 mb-12 text-xl font-light tracking-wide"
+            className="text-white/50 mb-12 text-xl font-light tracking-wide max-w-[280px] mx-auto"
           >
-            The pinnacle of personal finance.
+            The pinnacle of personal finance for the modern era.
           </motion.p>
 
           <div className="space-y-4">
@@ -812,7 +825,7 @@ export default function App() {
             transition={{ delay: 1.2 }}
             className="mt-16 text-xs uppercase tracking-[0.3em] text-[#e6e8eb]"
           >
-            Secured by Firebase Elite
+            Secure • Private • Elegant
           </motion.div>
         </motion.div>
       </div>
@@ -821,119 +834,165 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <div className="min-h-screen bg-[#0f1115] text-[#e6e8eb] font-sans selection:bg-[#00e5c2]/30">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0f1115]/80 backdrop-blur-xl border-b border-[#2a2e36]">
-        <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#00e5c2] rounded-xl flex items-center justify-center shadow-lg shadow-[#00e5c2]/20">
-              <TrendingUp size={24} className="text-[#0f1115]" />
-            </div>
-            <span className="text-xl font-bold tracking-tight">LuxWealth</span>
-            
-            <nav className="ml-4 flex items-center gap-1 bg-[#1a1d23] p-1 rounded-xl border border-[#2a2e36]">
-              <button 
-                onClick={() => setActiveTab('dashboard')}
-                className={cn(
-                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                  activeTab === 'dashboard' 
-                    ? "bg-[#00e5c2] text-[#0f1115]" 
-                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
-                )}
-              >
-                <LayoutDashboard size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Dashboard</span>
-              </button>
-              <button 
-                onClick={() => setActiveTab('information')}
-                className={cn(
-                  "flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all",
-                  activeTab === 'information' 
-                    ? "bg-[#00e5c2] text-[#0f1115]" 
-                    : "text-[#e6e8eb]/60 hover:text-[#e6e8eb] hover:bg-[#2a2e36]"
-                )}
-              >
-                <Info size={14} className="sm:w-4 sm:h-4" /> <span className="hidden xs:inline">Information</span>
-              </button>
-            </nav>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            <div className="hidden sm:flex flex-col items-end mr-2">
-              <span className="text-sm font-medium">{user.displayName}</span>
-              <span className="text-xs text-[#e6e8eb]/40">{user.email}</span>
-            </div>
-            <img src={user.photoURL || ''} alt="Profile" className="w-10 h-10 rounded-full border border-[#2a2e36]" referrerPolicy="no-referrer" />
-            <button onClick={logout} className="p-2 hover:bg-[#2a2e36] rounded-xl transition-colors text-[#e6e8eb]/60 hover:text-red-400">
-              <LogOut size={20} />
-            </button>
-          </div>
-        </div>
-      </header>
+      <div className="min-h-screen bg-luxury-bg text-white font-sans selection:bg-luxury-accent/30">
+        <Background />
+        
+        {/* Navigation */}
+        <nav className="sticky top-0 z-40 glass-dark border-b border-white/5">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-20 items-center">
+              <div className="flex items-center gap-3 group cursor-pointer">
+                <div className="w-10 h-10 bg-luxury-accent rounded-xl flex items-center justify-center group-hover:rotate-12 transition-transform shadow-lg shadow-luxury-accent/20">
+                  <TrendingUp size={24} className="text-black" />
+                </div>
+                <span className="text-2xl font-display font-bold tracking-tighter">LuxWealth</span>
+              </div>
+              
+              <div className="hidden md:flex items-center gap-8">
+                <button 
+                  onClick={() => setActiveTab('dashboard')}
+                  className={cn(
+                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
+                    activeTab === 'dashboard' ? "text-luxury-accent" : "text-white/40"
+                  )}
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => setActiveTab('information')}
+                  className={cn(
+                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
+                    activeTab === 'information' ? "text-luxury-accent" : "text-white/40"
+                  )}
+                >
+                  Accounts
+                </button>
+              </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="hidden sm:flex flex-col items-end mr-2">
+                  <span className="text-sm font-bold">{user.displayName}</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">Premium Member</span>
+                </div>
+                <img 
+                  src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=00e5c2&color=000`} 
+                  className="w-10 h-10 rounded-xl border border-white/10"
+                  alt="Avatar"
+                  referrerPolicy="no-referrer"
+                />
+                <button 
+                  onClick={() => logout()}
+                  className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-red-400"
+                  title="Logout"
+                >
+                  <LogOut size={20} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {activeTab === 'dashboard' ? (
           <>
-            {/* Summary Section */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
-              <Wallet size={48} />
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-1"
+              >
+                <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
+                  Welcome back, <span className="text-luxury-accent">{user.displayName?.split(' ')[0]}</span>
+                </h1>
+                <p className="text-white/40 text-lg font-medium">Here's your financial overview for today.</p>
+              </motion.div>
+              
+              <div className="flex items-center gap-3">
+                <Button 
+                  onClick={() => setIsTransactionModalOpen(true)}
+                  className="px-8"
+                >
+                  <Plus size={18} className="mr-2" />
+                  New Transaction
+                </Button>
+              </div>
             </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Cash</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalCash)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-[#00e5c2] text-xs font-medium">
-              <ArrowUpRight size={14} />
-              <span>Liquid Assets</span>
-            </div>
-          </Card>
 
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-purple-400">
-              <TrendingUp size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Investments</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalInvestments)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-purple-400 text-xs font-medium">
-              <TrendingUp size={14} />
-              <span>Growth Assets</span>
-            </div>
-          </Card>
+            {/* Stats Grid */}
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
+              <Card className="relative overflow-hidden group border-white/5">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                      <Wallet size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Liquidity</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalCash)}</h3>
+                  <p className="text-[10px] text-emerald-400/60 font-medium">Available Cash</p>
+                </div>
+              </Card>
 
-          <Card className="relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-red-400">
-              <CreditCard size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Total Debt</p>
-            <h3 className="text-2xl font-bold">{formatCurrency(totalDebt)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-red-400 text-xs font-medium">
-              <ArrowDownLeft size={14} />
-              <span>Liabilities</span>
-            </div>
-          </Card>
+              <Card className="relative overflow-hidden group border-white/5">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                      <TrendingUp size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Growth</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalInvestments)}</h3>
+                  <p className="text-[10px] text-indigo-400/60 font-medium">Total Investments</p>
+                </div>
+              </Card>
 
-          <Card className="relative overflow-hidden group border-[#00e5c2]/20">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-30 transition-opacity text-[#00e5c2]">
-              <Wallet size={48} />
-            </div>
-            <p className="text-sm font-medium text-[#e6e8eb]/40 uppercase tracking-wider mb-1">Net Cash</p>
-            <h3 className={cn("text-2xl font-bold", netCash >= 0 ? "text-[#00e5c2]" : "text-red-400")}>
-              {formatCurrency(netCash)}
-            </h3>
-            <div className="mt-4 flex items-center gap-2 text-[#e6e8eb]/40 text-xs font-medium">
-              <ArrowUpRight size={14} />
-              <span>Cash - Debt</span>
-            </div>
-          </Card>
+              <Card className="relative overflow-hidden group border-white/5">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400">
+                      <CreditCard size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Liabilities</span>
+                  </div>
+                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalDebt)}</h3>
+                  <p className="text-[10px] text-rose-400/60 font-medium">Outstanding Debt</p>
+                </div>
+              </Card>
 
-          <Card className="bg-[#00e5c2] text-[#0f1115] border-none shadow-2xl shadow-[#00e5c2]/20">
-            <p className="text-sm font-bold uppercase tracking-wider mb-1 opacity-60">Net Worth</p>
-            <h3 className="text-3xl font-black">{formatCurrency(netWorth)}</h3>
-            <div className="mt-4 flex items-center gap-2 text-[#0f1115]/60 text-xs font-bold">
-              <TrendingUp size={14} />
-              <span>Financial Health</span>
-            </div>
-          </Card>
-        </section>
+              <Card className="relative overflow-hidden group border-white/5">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-luxury-accent/10 rounded-full blur-2xl group-hover:bg-luxury-accent/20 transition-all duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-luxury-accent/10 rounded-lg text-luxury-accent">
+                      <PieChartIcon size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Net Cash</span>
+                  </div>
+                  <h3 className={cn("text-2xl font-display font-bold mb-1 tracking-tight", netCash >= 0 ? "text-luxury-accent" : "text-rose-400")}>
+                    {formatCurrency(netCash)}
+                  </h3>
+                  <p className="text-[10px] text-white/20 font-medium">Cash - Debt</p>
+                </div>
+              </Card>
+
+              <Card className="relative overflow-hidden group bg-luxury-accent border-none text-black">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-all duration-500" />
+                <div className="relative z-10">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-black/10 rounded-lg text-black">
+                      <TrendingUp size={20} />
+                    </div>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">Net Worth</span>
+                  </div>
+                  <h3 className="text-3xl font-display font-bold mb-1 tracking-tight">{formatCurrency(netWorth)}</h3>
+                  <p className="text-[10px] text-black/40 font-bold">Total Portfolio Value</p>
+                </div>
+              </Card>
+            </section>
 
         {/* Charts Section */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -941,87 +1000,59 @@ export default function App() {
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-[#00e5c2]/10 rounded-lg">
-                  <BarChart3 size={20} className="text-[#00e5c2]" />
+                <div className="p-2 bg-luxury-accent/10 rounded-lg text-luxury-accent">
+                  <BarChart3 size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-[#e6e8eb]">Asset Overview</h3>
-                  <p className="text-xs text-[#e6e8eb]/40">Distribution of your liquid and growth assets</p>
+                  <h3 className="text-lg font-display font-bold tracking-tight">Asset Allocation</h3>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Portfolio Distribution</p>
                 </div>
               </div>
             </div>
-            <div className="h-[320px] w-full">
+            <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={[
-                    { name: 'Cash', value: totalCash, color: '#00e5c2', secondaryColor: '#00b398' },
-                    { name: 'Investments', value: totalInvestments, color: '#8b5cf6', secondaryColor: '#6d28d9' },
-                    { name: 'Debt', value: totalDebt, color: '#f87171', secondaryColor: '#dc2626' },
-                  ]}
-                  margin={{ top: 20, right: 30, left: 0, bottom: 0 }}
-                >
-                  <defs>
-                    <linearGradient id="barGradientCash" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#00e5c2" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#00e5c2" stopOpacity={0.2}/>
-                    </linearGradient>
-                    <linearGradient id="barGradientInv" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.2}/>
-                    </linearGradient>
-                    <linearGradient id="barGradientDebt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f87171" stopOpacity={0.8}/>
-                      <stop offset="100%" stopColor="#f87171" stopOpacity={0.2}/>
-                    </linearGradient>
-                  </defs>
+                <BarChart data={assetAllocationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis 
                     dataKey="name" 
-                    stroke="#e6e8eb" 
-                    opacity={0.3} 
                     axisLine={false} 
-                    tickLine={false}
-                    tick={{ fontSize: 12, fontWeight: 500 }}
-                    dy={10}
+                    tickLine={false} 
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }}
                   />
-                  <YAxis hide />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }}
+                    tickFormatter={(value) => formatCurrency(value).replace('Rp', '')}
+                  />
                   <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.03)', radius: 12 }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-4 rounded-2xl shadow-2xl backdrop-blur-xl">
-                            <p className="text-xs font-bold text-[#e6e8eb]/40 uppercase tracking-widest mb-1">{payload[0].payload.name}</p>
-                            <p className="text-lg font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
-                          </div>
-                        );
-                      }
-                      return null;
+                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                    contentStyle={{ 
+                      backgroundColor: '#0f1115', 
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 'bold'
                     }}
+                    itemStyle={{ color: '#fff' }}
+                    formatter={(value: number) => [formatCurrency(value), 'Value']}
                   />
-                  <Bar 
-                    dataKey="value" 
-                    radius={[12, 12, 4, 4]} 
-                    barSize={60}
-                    animationDuration={1500}
-                  >
-                    <LabelList 
-                      dataKey="value" 
-                      position="top" 
-                      formatter={(val: number) => formatCurrency(val)}
-                      style={{ fill: '#e6e8eb', fontSize: 10, fontWeight: 'bold', opacity: 0.6 }}
-                    />
-                    {
-                      [
-                        { name: 'Cash', gradient: 'url(#barGradientCash)' },
-                        { name: 'Investments', gradient: 'url(#barGradientInv)' },
-                        { name: 'Debt', gradient: 'url(#barGradientDebt)' },
-                      ].map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.gradient} />
-                      ))
-                    }
+                  <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
+                    {assetAllocationData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
+              {assetAllocationData.map((item, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{item.name}</span>
+                </div>
+              ))}
             </div>
           </Card>
 
@@ -1099,319 +1130,393 @@ export default function App() {
         </section>
 
         {/* Data Tables */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
           {/* Cash Accounts */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <Wallet size={18} className="text-[#00e5c2]" /> Cash Accounts
-              </h3>
+          <Card className="relative overflow-hidden border-white/5">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                  <Wallet size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-display font-bold tracking-tight">Accounts</h3>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Liquid Assets</p>
+                </div>
+              </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
-                className="py-1.5 px-3 text-xs rounded-lg"
+                variant="secondary"
+                className="p-2 rounded-lg"
               >
-                <Plus size={14} /> Add
+                <Plus size={16} />
               </Button>
             </div>
             <div className="space-y-4">
-              {accounts.map(account => (
-                <div key={account.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-[#00e5c2]/50 transition-all">
-                  <div>
-                    <p className="font-medium">{account.name}</p>
-                    <p className="text-lg font-bold text-[#00e5c2]">{formatCurrency(account.balance)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('accounts', account.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+              {accounts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                  <Wallet size={48} className="mb-4 opacity-10" />
+                  <p className="text-sm font-medium">No accounts added</p>
                 </div>
-              ))}
-              {accounts.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No accounts added</p>}
+              ) : (
+                accounts.map(account => (
+                  <motion.div 
+                    key={account.id}
+                    whileHover={{ x: 4 }}
+                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all"
+                  >
+                    <div>
+                      <p className="text-sm font-bold tracking-tight">{account.name}</p>
+                      <p className="text-lg font-display font-bold text-emerald-400">{formatCurrency(account.balance)}</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => deleteItem('accounts', account.id)}
+                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </Card>
 
           {/* Investments */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <TrendingUp size={18} className="text-purple-400" /> Investments
-              </h3>
+          <Card className="relative overflow-hidden border-white/5">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
+                  <TrendingUp size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-display font-bold tracking-tight">Investments</h3>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Growth Portfolio</p>
+                </div>
+              </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
                 variant="secondary"
-                className="py-1.5 px-3 text-xs rounded-lg"
+                className="p-2 rounded-lg"
               >
-                <Plus size={14} /> Add
+                <Plus size={16} />
               </Button>
             </div>
             <div className="space-y-4">
-              {investments.map(inv => (
-                <div key={inv.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-purple-400/50 transition-all">
-                  <div>
-                    <p className="font-medium">{inv.name}</p>
-                    <p className="text-xs text-[#e6e8eb]/40">{inv.category}</p>
-                    <p className="text-lg font-bold text-purple-400">{formatCurrency(inv.value)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-purple-400 transition-colors"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('investments', inv.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+              {investments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                  <TrendingUp size={48} className="mb-4 opacity-10" />
+                  <p className="text-sm font-medium">No investments added</p>
                 </div>
-              ))}
-              {investments.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No investments added</p>}
+              ) : (
+                investments.map(inv => (
+                  <motion.div 
+                    key={inv.id}
+                    whileHover={{ x: 4 }}
+                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all"
+                  >
+                    <div>
+                      <p className="text-sm font-bold tracking-tight">{inv.name}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">{inv.category}</span>
+                      </div>
+                      <p className="text-lg font-display font-bold text-indigo-400">{formatCurrency(inv.value)}</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-indigo-400 transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => deleteItem('investments', inv.id)}
+                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </Card>
 
           {/* Liabilities */}
-          <Card className="xl:col-span-1">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
-                <CreditCard size={18} className="text-red-400" /> Liabilities
-              </h3>
+          <Card className="relative overflow-hidden border-white/5">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-display font-bold tracking-tight">Liabilities</h3>
+                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding Debt</p>
+                </div>
+              </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
                 variant="secondary"
-                className="py-1.5 px-3 text-xs rounded-lg"
+                className="p-2 rounded-lg"
               >
-                <Plus size={14} /> Add
+                <Plus size={16} />
               </Button>
             </div>
             <div className="space-y-4">
-              {liabilities.map(debt => (
-                <div key={debt.id} className="group flex items-center justify-between p-4 bg-[#0f1115] rounded-xl border border-[#2a2e36] hover:border-red-400/50 transition-all">
-                  <div>
-                    <p className="font-medium">{debt.name}</p>
-                    <p className="text-lg font-bold text-red-400">{formatCurrency(debt.amount)}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button 
-                      onClick={() => deleteItem('liabilities', debt.id)}
-                      className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+              {liabilities.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                  <CreditCard size={48} className="mb-4 opacity-10" />
+                  <p className="text-sm font-medium">No liabilities added</p>
                 </div>
-              ))}
-              {liabilities.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No liabilities added</p>}
+              ) : (
+                liabilities.map(debt => (
+                  <motion.div 
+                    key={debt.id}
+                    whileHover={{ x: 4 }}
+                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-rose-500/30 transition-all"
+                  >
+                    <div>
+                      <p className="text-sm font-bold tracking-tight">{debt.name}</p>
+                      <p className="text-lg font-display font-bold text-rose-400">{formatCurrency(debt.amount)}</p>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
+                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button 
+                        onClick={() => deleteItem('liabilities', debt.id)}
+                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))
+              )}
             </div>
           </Card>
         </div>
 
         {/* Transactions History */}
-        <Card>
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <History size={18} className="text-[#00e5c2]" /> Recent Transactions
-            </h3>
+        <Card className="relative overflow-hidden border-white/5">
+          <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-3">
-              {accounts.length === 0 && (
-                <Button onClick={seedData} variant="ghost" className="text-xs opacity-50">
-                  Load Sample Data
-                </Button>
-              )}
+              <div className="p-2 bg-white/5 rounded-lg text-white/60">
+                <History size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-display font-bold tracking-tight">Recent Transactions</h3>
+                <p className="text-[10px] text-white/40 uppercase tracking-widest">Complete Ledger</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
               <Button 
                 onClick={() => { setIsTransactionModalOpen(true); setSelectedTransactionType('expense'); }} 
                 variant="primary" 
-                className="bg-white text-black hover:bg-gray-200 py-1.5 px-3 text-xs rounded-lg"
+                className="bg-white text-black hover:bg-gray-200 py-2 px-4 text-xs rounded-xl font-bold tracking-tight transition-all active:scale-95"
               >
-                <History size={14} /> New Transaction
+                <Plus size={14} className="mr-2" /> New Transaction
               </Button>
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
+          <div className="overflow-x-auto -mx-6 px-6">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="text-[#e6e8eb]/40 text-sm border-b border-[#2a2e36]">
-                  <th className="pb-4 font-medium">Date</th>
-                  <th className="pb-4 font-medium">Type</th>
-                  <th className="pb-4 font-medium">Account</th>
-                  <th className="pb-4 font-medium">Amount</th>
-                  <th className="pb-4 font-medium">Notes</th>
-                  <th className="pb-4 font-medium text-right">Actions</th>
+                <tr className="border-b border-white/5">
+                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Date</th>
+                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Type</th>
+                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Account</th>
+                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Amount</th>
+                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Notes</th>
+                  <th className="pb-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/20">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#2a2e36]">
-                {transactions.map(t => (
-                  <tr key={t.id} className="text-sm group">
-                    <td className="py-4 text-[#e6e8eb]/60">{new Date(t.date).toLocaleDateString()}</td>
-                    <td className="py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-md text-[10px] font-bold uppercase",
-                        t.type === 'income' ? "bg-green-500/10 text-green-500" :
-                        t.type === 'expense' ? "bg-red-500/10 text-red-500" :
-                        t.type === 'investment_deposit' ? "bg-purple-500/10 text-purple-500" :
-                        t.type === 'investment_withdrawal' ? "bg-orange-500/10 text-orange-500" :
-                        t.type === 'debt_payment' ? "bg-blue-500/10 text-blue-500" :
-                        t.type === 'debt_expense' ? "bg-red-500/10 text-red-500" :
-                        "bg-gray-500/10 text-gray-500"
-                      )}>
-                        {t.type.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="py-4 font-medium">
-                      {accounts.find(a => a.id === t.accountId)?.name || 
-                       investments.find(i => i.id === t.accountId)?.name || 
-                       liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
-                    </td>
-                    <td className={cn(
-                      "py-4 font-bold", 
-                      (t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_payment') ? "text-green-500" : "text-red-500"
-                    )}>
-                      {(t.type === 'income' || t.type === 'investment_deposit' || t.type === 'debt_expense') ? '+' : '-'}{formatCurrency(t.amount)}
-                    </td>
-                    <td className="py-4 text-[#e6e8eb]/40">{t.notes}</td>
-                    <td className="py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button 
-                          onClick={() => { 
-                            setEditingItem(t); 
-                            setSelectedTransactionType(t.type);
-                            setSelectedAccountId(t.accountId);
-                            setIsTransactionModalOpen(true); 
-                          }}
-                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => deleteTransaction(t)}
-                          className="p-2 bg-[#2a2e36] hover:bg-[#353a44] rounded-lg text-[#e6e8eb]/60 hover:text-red-400 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+              <tbody className="divide-y divide-white/5">
+                {transactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-white/10">
+                      <div className="flex flex-col items-center">
+                        <History size={48} className="mb-4 opacity-10" />
+                        <p className="text-sm font-medium">No transactions found</p>
                       </div>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            {transactions.length === 0 && <p className="text-center text-[#e6e8eb]/20 py-8">No transactions yet</p>}
-          </div>
-        </Card>
-        </>
-        ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-[#e6e8eb]">Banking & E-Wallet Information</h2>
-                <p className="text-[#e6e8eb]/40">Manage your account numbers and phone numbers for easy access</p>
-              </div>
-              <Button onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}>
-                <Plus size={18} /> Add Information
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {information.map((info) => (
-                <Card 
-                  key={info.id} 
-                  onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
-                  className={cn(
-                    "relative group hover:border-[#00e5c2]/30 transition-all cursor-pointer",
-                    selectedInfoId === info.id ? "border-[#00e5c2]/50 ring-1 ring-[#00e5c2]/20" : ""
-                  )}
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "p-3 rounded-xl",
-                        info.type === 'bank' ? "bg-blue-500/10 text-blue-500" : 
-                        info.type === 'ewallet' ? "bg-[#00e5c2]/10 text-[#00e5c2]" :
-                        info.type === 'crypto' ? "bg-orange-500/10 text-orange-500" :
-                        "bg-purple-500/10 text-purple-500"
+                ) : (
+                  transactions.map(t => (
+                    <motion.tr 
+                      key={t.id}
+                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                      className="group transition-colors"
+                    >
+                      <td className="py-4 text-sm text-white/60 font-mono">
+                        {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="py-4">
+                        <span className={cn(
+                          "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest",
+                          t.type === 'income' ? "bg-emerald-500/10 text-emerald-400" :
+                          t.type === 'expense' ? "bg-rose-500/10 text-rose-400" :
+                          t.type === 'investment_deposit' ? "bg-indigo-500/10 text-indigo-400" :
+                          t.type === 'investment_withdrawal' ? "bg-amber-500/10 text-amber-400" :
+                          t.type === 'debt_payment' ? "bg-sky-500/10 text-sky-400" :
+                          t.type === 'debt_expense' ? "bg-rose-500/10 text-rose-400" :
+                          "bg-white/5 text-white/40"
+                        )}>
+                          {t.type.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="py-4">
+                        <span className="text-sm font-bold tracking-tight">
+                          {accounts.find(a => a.id === t.accountId)?.name || 
+                           investments.find(i => i.id === t.accountId)?.name || 
+                           liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
+                        </span>
+                      </td>
+                      <td className={cn(
+                        "py-4 font-display font-bold",
+                        t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? "text-emerald-400" : "text-rose-400"
                       )}>
-                        {info.type === 'bank' ? <Wallet size={24} /> : 
-                         info.type === 'ewallet' ? <TrendingUp size={24} /> :
-                         info.type === 'crypto' ? <TrendingUp size={24} /> :
-                         <LayoutDashboard size={24} />}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg">{info.provider}</h4>
-                        <p className="text-xs text-[#e6e8eb]/40 uppercase tracking-widest">{info.type}</p>
-                      </div>
-                    </div>
-                    <AnimatePresence>
-                      {selectedInfoId === info.id && (
-                        <motion.div 
-                          initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                          animate={{ opacity: 1, scale: 1, x: 0 }}
-                          exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                          className="flex items-center gap-1"
-                        >
+                        {t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? '+' : '-'}{formatCurrency(t.amount)}
+                      </td>
+                      <td className="py-4">
+                        <p className="text-xs text-white/40 max-w-[200px] truncate">{t.notes || '-'}</p>
+                      </td>
+                      <td className="py-4 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
                           <button 
-                            onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
-                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-[#00e5c2] border border-white/10 transition-colors"
-                            title="Edit"
+                            onClick={() => { 
+                              setEditingItem(t); 
+                              setSelectedTransactionType(t.type);
+                              setSelectedAccountId(t.accountId);
+                              setIsTransactionModalOpen(true); 
+                            }}
+                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button 
-                            onClick={(e) => { e.stopPropagation(); deleteDoc(doc(db, `users/${user.uid}/information`, info.id)); }}
-                            className="p-2 bg-white/5 hover:bg-white/10 backdrop-blur-md rounded-lg text-[#e6e8eb]/60 hover:text-red-400 border border-white/10 transition-colors"
-                            title="Delete"
+                            onClick={() => deleteTransaction(t)}
+                            className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          {transactions.length === 0 && <p className="text-center text-white/10 py-12">No transactions yet</p>}
+        </Card>
+      </>
+    ) : (
+      <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Banking & E-Wallet</h2>
+                <p className="text-white/40 max-w-md">Securely manage your account numbers and digital wallet credentials for quick reference.</p>
+              </div>
+              <Button 
+                onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}
+                className="bg-emerald-500 text-black hover:bg-emerald-400 py-3 px-6 rounded-2xl font-bold tracking-tight transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Plus size={18} /> Add New Info
+              </Button>
+            </div>
 
-                  <div className="space-y-4">
-                    <div className="bg-[#0f1115] p-4 rounded-xl border border-[#2a2e36] relative group/item">
-                      <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Number / Phone</p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-xl font-mono font-medium tracking-wider">{info.accountNumber}</span>
-                        <CopyButton text={info.accountNumber} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {information.length === 0 ? (
+                <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/5 rounded-[2rem] border border-dashed border-white/10">
+                  <div className="p-4 bg-white/5 rounded-full mb-4">
+                    <CreditCard size={32} className="text-white/20" />
+                  </div>
+                  <p className="text-white/40 font-medium">No banking information added yet</p>
+                </div>
+              ) : (
+                information.map((info) => (
+                  <motion.div
+                    key={info.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -4 }}
+                    className={cn(
+                      "group relative p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer",
+                      selectedInfoId === info.id && "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+                    )}
+                    onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
+                  >
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-3 rounded-2xl text-white/60 group-hover:text-emerald-400 transition-colors",
+                          info.type === 'bank' ? "bg-blue-500/10" : 
+                          info.type === 'ewallet' ? "bg-emerald-500/10" :
+                          info.type === 'crypto' ? "bg-orange-500/10" :
+                          "bg-purple-500/10"
+                        )}>
+                          {info.type === 'bank' ? <Wallet size={24} /> : 
+                           info.type === 'ewallet' ? <CreditCard size={24} /> :
+                           info.type === 'crypto' ? <TrendingUp size={24} /> :
+                           <LayoutDashboard size={24} />}
+                        </div>
+                        <div>
+                          <h3 className="font-bold tracking-tight">{info.provider}</h3>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest">{info.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
+                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteItem('information', info.id); }}
+                          className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
 
-                    {info.accountName && (
-                      <div>
-                        <p className="text-[10px] font-bold text-[#e6e8eb]/30 uppercase tracking-widest mb-1">Account Name</p>
-                        <p className="text-sm font-medium">{info.accountName}</p>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
+                        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Number / Phone</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-lg font-mono font-medium tracking-wider text-white/80">
+                            {selectedInfoId === info.id ? info.accountNumber : info.accountNumber.replace(/.(?=.{4})/g, '•')}
+                          </p>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(info.accountNumber); }}
+                            className="p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-emerald-400 transition-colors"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                </Card>
-              ))}
-              {information.length === 0 && (
-                <div className="col-span-full py-20 text-center">
-                  <div className="w-20 h-20 bg-[#1a1d23] rounded-full flex items-center justify-center mx-auto mb-4 border border-[#2a2e36]">
-                    <Info size={32} className="text-[#e6e8eb]/20" />
-                  </div>
-                  <h3 className="text-lg font-bold text-[#e6e8eb]/60">No information stored</h3>
-                  <p className="text-sm text-[#e6e8eb]/40">Add your bank accounts or e-wallets to get started</p>
-                </div>
+                      
+                      {info.accountName && (
+                        <div>
+                          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Name</p>
+                          <p className="font-bold tracking-tight text-white/60 uppercase">{info.accountName}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
               )}
             </div>
           </div>
@@ -1424,29 +1529,33 @@ export default function App() {
         onClose={() => setIsAccountModalOpen(false)} 
         title={editingItem ? "Edit Asset" : "Add Asset"}
       >
-        <form onSubmit={handleAddAccount} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Name</label>
-            <input 
-              name="name" 
-              defaultValue={editingItem?.name}
-              required 
-              placeholder="e.g. BCA, BRI, Cash"
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2] transition-colors"
-            />
+        <form onSubmit={handleAddAccount} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Account Name</label>
+              <input 
+                name="name" 
+                defaultValue={editingItem?.name}
+                required 
+                placeholder="e.g. BCA, BRI, Cash"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Balance (IDR)</label>
+              <input 
+                name="balance" 
+                type="number" 
+                defaultValue={editingItem?.balance}
+                required 
+                placeholder="0"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Balance (IDR)</label>
-            <input 
-              name="balance" 
-              type="number" 
-              defaultValue={editingItem?.balance}
-              required 
-              placeholder="0"
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2] transition-colors"
-            />
-          </div>
-          <Button className="w-full py-4 mt-4">Save Account</Button>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            {editingItem ? "Update Asset" : "Create Asset"}
+          </Button>
         </form>
       </Modal>
 
@@ -1455,29 +1564,50 @@ export default function App() {
         onClose={() => setIsInvestmentModalOpen(false)} 
         title={editingItem ? "Edit Investment" : "Add Investment"}
       >
-        <form onSubmit={handleAddInvestment} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Investment Name</label>
-            <input name="name" defaultValue={editingItem?.name} required placeholder="e.g. Gold, SBN" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+        <form onSubmit={handleAddInvestment} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Investment Name</label>
+              <input 
+                name="name" 
+                defaultValue={editingItem?.name}
+                required 
+                placeholder="e.g. Gold, SBN"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Category</label>
+              <select 
+                name="category" 
+                defaultValue={editingItem?.category || 'Stocks'}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
+              >
+                <option value="Gold" className="bg-[#0a0a0a]">Gold</option>
+                <option value="Stocks" className="bg-[#0a0a0a]">Stocks</option>
+                <option value="Mutual Funds" className="bg-[#0a0a0a]">Mutual Funds</option>
+                <option value="Bank Interest" className="bg-[#0a0a0a]">Bank Interest</option>
+                <option value="Deposito" className="bg-[#0a0a0a]">Deposito</option>
+                <option value="Crypto" className="bg-[#0a0a0a]">Crypto</option>
+                <option value="Valas" className="bg-[#0a0a0a]">Valas</option>
+                <option value="Others" className="bg-[#0a0a0a]">Others</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Value (IDR)</label>
+              <input 
+                name="value" 
+                type="number" 
+                defaultValue={editingItem?.value}
+                required 
+                placeholder="0"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Category</label>
-            <select name="category" defaultValue={editingItem?.category || 'Stocks'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
-              <option>Gold</option>
-              <option>Stocks</option>
-              <option>Mutual Funds</option>
-              <option>Bank Interest</option>
-              <option>Deposito</option>
-              <option>Crypto</option>
-              <option>Valas</option>
-              <option>Others</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Value (IDR)</label>
-            <input name="value" type="number" defaultValue={editingItem?.value} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
-          </div>
-          <Button className="w-full py-4 mt-4">Save Investment</Button>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            {editingItem ? "Update Investment" : "Create Investment"}
+          </Button>
         </form>
       </Modal>
 
@@ -1486,16 +1616,33 @@ export default function App() {
         onClose={() => setIsLiabilityModalOpen(false)} 
         title={editingItem ? "Edit Liability" : "Add Liability"}
       >
-        <form onSubmit={handleAddLiability} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Debt Name</label>
-            <input name="name" defaultValue={editingItem?.name} required placeholder="e.g. Credit Card" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+        <form onSubmit={handleAddLiability} className="space-y-6">
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Liability Name</label>
+              <input 
+                name="name" 
+                defaultValue={editingItem?.name}
+                required 
+                placeholder="e.g. Credit Card, Loan"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Amount (IDR)</label>
+              <input 
+                name="amount" 
+                type="number" 
+                defaultValue={editingItem?.amount}
+                required 
+                placeholder="0"
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount Owed (IDR)</label>
-            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
-          </div>
-          <Button className="w-full py-4 mt-4">Save Liability</Button>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            {editingItem ? "Update Liability" : "Create Liability"}
+          </Button>
         </form>
       </Modal>
 
@@ -1510,7 +1657,7 @@ export default function App() {
       >
         <form onSubmit={handleAddTransaction} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Transaction Type</label>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Transaction Type</label>
             <select 
               name="type" 
               value={selectedTransactionType}
@@ -1518,39 +1665,39 @@ export default function App() {
                 setSelectedTransactionType(e.target.value);
                 setSelectedAccountId(''); // Reset account when type changes
               }}
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
             >
-              <option value="income">Income (Add to Cash)</option>
-              <option value="expense">Expense (Spend from Cash)</option>
-              <option value="investment_deposit">Investment Deposit</option>
-              <option value="investment_withdrawal">Investment Withdrawal</option>
-              <option value="debt_payment">Debt Payment (Reduce Debt)</option>
-              <option value="debt_expense">Debt Expense (Increase Debt)</option>
+              <option value="income" className="bg-[#0a0a0a]">Income (Add to Cash)</option>
+              <option value="expense" className="bg-[#0a0a0a]">Expense (Spend from Cash)</option>
+              <option value="investment_deposit" className="bg-[#0a0a0a]">Investment Deposit</option>
+              <option value="investment_withdrawal" className="bg-[#0a0a0a]">Investment Withdrawal</option>
+              <option value="debt_payment" className="bg-[#0a0a0a]">Debt Payment (Reduce Debt)</option>
+              <option value="debt_expense" className="bg-[#0a0a0a]">Debt Expense (Increase Debt)</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Target Account</label>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Target Account</label>
             <select 
               name="accountId" 
               value={selectedAccountId}
               onChange={(e) => setSelectedAccountId(e.target.value)}
               required
-              className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
             >
-              <option value="" disabled>Select an account</option>
+              <option value="" disabled className="bg-[#0a0a0a]">Select an account</option>
               {(selectedTransactionType === 'income' || selectedTransactionType === 'expense') && (
-                <optgroup label="Cash Accounts">
-                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                <optgroup label="Cash Accounts" className="bg-[#0a0a0a]">
+                  {accounts.map(a => <option key={a.id} value={a.id} className="bg-[#0a0a0a]">{a.name}</option>)}
                 </optgroup>
               )}
               {(selectedTransactionType === 'investment_deposit' || selectedTransactionType === 'investment_withdrawal') && (
-                <optgroup label="Investments">
-                  {investments.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                <optgroup label="Investments" className="bg-[#0a0a0a]">
+                  {investments.map(i => <option key={i.id} value={i.id} className="bg-[#0a0a0a]">{i.name}</option>)}
                 </optgroup>
               )}
               {(selectedTransactionType === 'debt_payment' || selectedTransactionType === 'debt_expense') && (
-                <optgroup label="Liabilities">
-                  {liabilities.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                <optgroup label="Liabilities" className="bg-[#0a0a0a]">
+                  {liabilities.map(l => <option key={l.id} value={l.id} className="bg-[#0a0a0a]">{l.name}</option>)}
                 </optgroup>
               )}
             </select>
@@ -1565,14 +1712,28 @@ export default function App() {
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Amount (IDR)</label>
-            <input name="amount" type="number" defaultValue={editingItem?.amount} required placeholder="0" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Amount (IDR)</label>
+            <input 
+              name="amount" 
+              type="number" 
+              defaultValue={editingItem?.amount}
+              required 
+              placeholder="0"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Notes</label>
-            <input name="notes" defaultValue={editingItem?.notes} placeholder="Optional notes" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Notes</label>
+            <input 
+              name="notes" 
+              defaultValue={editingItem?.notes}
+              placeholder="Optional notes"
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
           </div>
-          <Button className="w-full py-4 mt-4">{editingItem ? "Update Transaction" : "Record Transaction"}</Button>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            {editingItem ? "Update Transaction" : "Record Transaction"}
+          </Button>
         </form>
       </Modal>
 
@@ -1584,29 +1745,52 @@ export default function App() {
         }} 
         title={editingItem ? "Edit Information" : "Add Information"}
       >
-        <form onSubmit={handleAddInformation} className="space-y-4">
+        <form onSubmit={handleAddInformation} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Type</label>
-            <select name="type" defaultValue={editingItem?.type || 'bank'} className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]">
-              <option value="bank">Bank Account</option>
-              <option value="ewallet">E-Wallet</option>
-              <option value="crypto">Crypto Wallet</option>
-              <option value="rdn">RDN Account</option>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Type</label>
+            <select 
+              name="type" 
+              defaultValue={editingItem?.type || 'bank'} 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
+            >
+              <option value="bank" className="bg-[#0a0a0a]">Bank Account</option>
+              <option value="ewallet" className="bg-[#0a0a0a]">E-Wallet</option>
+              <option value="crypto" className="bg-[#0a0a0a]">Crypto Wallet</option>
+              <option value="rdn" className="bg-[#0a0a0a]">RDN Account</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Provider Name</label>
-            <input name="provider" defaultValue={editingItem?.provider} required placeholder="e.g. BCA, Mandiri, GoPay, OVO" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Provider Name</label>
+            <input 
+              name="provider" 
+              defaultValue={editingItem?.provider} 
+              required 
+              placeholder="e.g. BCA, Mandiri, GoPay, OVO" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Number / Phone</label>
-            <input name="accountNumber" defaultValue={editingItem?.accountNumber} required placeholder="e.g. 1234567890" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Account Number / Phone</label>
+            <input 
+              name="accountNumber" 
+              defaultValue={editingItem?.accountNumber} 
+              required 
+              placeholder="e.g. 1234567890" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#e6e8eb]/60 mb-2">Account Name</label>
-            <input name="accountName" defaultValue={editingItem?.accountName} placeholder="e.g. John Doe" className="w-full bg-[#0f1115] border border-[#2a2e36] rounded-xl px-4 py-3 focus:outline-none focus:border-[#00e5c2]" />
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Account Name</label>
+            <input 
+              name="accountName" 
+              defaultValue={editingItem?.accountName} 
+              placeholder="e.g. John Doe" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
           </div>
-          <Button className="w-full py-4 mt-4">Save Information</Button>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            Save Information
+          </Button>
         </form>
       </Modal>
 
@@ -1620,16 +1804,24 @@ export default function App() {
         title="Confirm Deletion"
       >
         <div className="space-y-6">
-          <p className="text-[#e6e8eb]/60">
-            {deleteCollection === 'transactions' 
-              ? "Are you sure you want to delete this transaction? This action will also automatically reverse the balance change on the associated account."
-              : "Are you sure you want to delete this item? This action cannot be undone."}
-          </p>
-          <div className="flex gap-3">
-            <Button onClick={() => setIsDeleteConfirmOpen(false)} variant="secondary" className="flex-1">
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-white/80 text-center leading-relaxed">
+              {deleteCollection === 'transactions' 
+                ? "Are you sure you want to delete this transaction? This action will also automatically reverse the balance change on the associated account."
+                : "Are you sure you want to delete this item? This action cannot be undone."}
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => setIsDeleteConfirmOpen(false)} 
+              className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all"
+            >
               Cancel
             </Button>
-            <Button onClick={confirmDelete} variant="danger" className="flex-1">
+            <Button 
+              onClick={confirmDelete} 
+              className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all active:scale-[0.98]"
+            >
               Delete
             </Button>
           </div>
