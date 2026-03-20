@@ -1028,49 +1028,52 @@ export default function App() {
             </section>
 
         {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden p-10">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-luxury-accent/10 rounded-lg text-luxury-accent">
-                  <BarChart3 size={20} />
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-luxury-accent/10 rounded-xl text-luxury-accent">
+                  <BarChart3 size={24} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-display font-bold tracking-tight">Asset Allocation</h3>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Portfolio Distribution</p>
+                  <h3 className="text-xl font-display font-bold tracking-tight">Asset Allocation</h3>
+                  <p className="text-[11px] text-white/40 uppercase tracking-widest">Portfolio Distribution</p>
                 </div>
               </div>
             </div>
-            <div className="h-[300px] w-full">
+            <div className="h-[340px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={assetAllocationData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <BarChart data={assetAllocationData} margin={{ top: 30, right: 40, left: 40, bottom: 30 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis 
                     dataKey="name" 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }}
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 'bold' }}
+                    dy={15}
                   />
                   <YAxis 
                     axisLine={false} 
                     tickLine={false} 
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 'bold' }}
+                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 'bold' }}
                     tickFormatter={(value) => formatCurrency(value).replace('Rp', '')}
+                    width={90}
                   />
                   <Tooltip 
                     cursor={{ fill: 'rgba(255,255,255,0.05)' }}
                     contentStyle={{ 
                       backgroundColor: '#0f1115', 
                       border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '12px',
-                      fontSize: '12px',
-                      fontWeight: 'bold'
+                      borderRadius: '16px',
+                      fontSize: '13px',
+                      fontWeight: 'bold',
+                      padding: '12px'
                     }}
                     itemStyle={{ color: '#fff' }}
                     formatter={(value: number) => [formatCurrency(value), 'Value']}
                   />
-                  <Bar dataKey="value" radius={[8, 8, 0, 0]} barSize={60}>
+                  <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={70}>
                     {assetAllocationData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -1079,30 +1082,30 @@ export default function App() {
               </ResponsiveContainer>
             </div>
             
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-12">
               {assetAllocationData.map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">{item.name}</span>
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">{item.name}</span>
                 </div>
               ))}
             </div>
           </Card>
 
-          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col relative overflow-hidden">
+          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col relative overflow-hidden p-10">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
-            <div className="flex items-center gap-3 mb-8">
-              <div className="p-2 bg-purple-500/10 rounded-lg">
-                <PieChartIcon size={20} className="text-purple-400" />
+            <div className="flex items-center gap-4 mb-12">
+              <div className="p-3 bg-purple-500/10 rounded-xl">
+                <PieChartIcon size={24} className="text-purple-400" />
               </div>
               <div>
-                <h3 className="font-bold text-lg text-[#e6e8eb]">Allocation</h3>
+                <h3 className="font-bold text-xl text-[#e6e8eb]">Allocation</h3>
                 <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
               </div>
             </div>
-            <div className="h-[280px] w-full relative">
+            <div className="h-[260px] w-full relative">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
+                <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                   <defs>
                     {assetAllocationData.map((entry, index) => (
                       <linearGradient key={`grad-${index}`} id={`pieGrad-${index}`} x1="0" y1="0" x2="0" y2="1">
@@ -1113,8 +1116,8 @@ export default function App() {
                   </defs>
                   <Pie
                     data={assetAllocationData}
-                    innerRadius={75}
-                    outerRadius={100}
+                    innerRadius={70}
+                    outerRadius={95}
                     paddingAngle={8}
                     dataKey="value"
                     stroke="none"
@@ -1148,14 +1151,14 @@ export default function App() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-auto pt-4 grid grid-cols-2 gap-2">
+            <div className="mt-auto pt-12 flex flex-col gap-4">
               {assetAllocationData.slice(0, 4).map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] font-medium text-[#e6e8eb]/60 truncate">{item.name}</span>
+                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                    <span className="text-xs font-bold text-[#e6e8eb]/60 uppercase tracking-wider">{item.name}</span>
                   </div>
-                  <span className="text-[10px] font-bold text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
+                  <span className="text-sm font-black text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
                 </div>
               ))}
             </div>
@@ -1163,39 +1166,39 @@ export default function App() {
         </section>
 
         {/* Data Tables */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mb-12">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mb-16">
           {/* Cash Accounts */}
-          <Card className="relative overflow-hidden border-white/5">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
-                  <Wallet size={20} />
+          <Card className="relative overflow-hidden border-white/5 p-10">
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-400">
+                  <Wallet size={28} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-display font-bold tracking-tight">Accounts</h3>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Liquid Assets</p>
+                  <h3 className="text-2xl font-display font-bold tracking-tight">Accounts</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Liquid Assets</p>
                 </div>
               </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
                 variant="secondary"
-                className="p-2 rounded-lg"
+                className="p-3 rounded-2xl"
               >
-                <Plus size={16} />
+                <Plus size={20} />
               </Button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {accounts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                  <Wallet size={48} className="mb-4 opacity-10" />
-                  <p className="text-sm font-medium">No accounts added</p>
+                <div className="flex flex-col items-center justify-center py-16 text-white/10">
+                  <Wallet size={64} className="mb-6 opacity-10" />
+                  <p className="text-base font-medium">No accounts added</p>
                 </div>
               ) : (
                 accounts.map(account => (
                   <motion.div 
                     key={account.id}
                     whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all"
+                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-emerald-500/30 transition-all"
                   >
                     <div>
                       <p className="text-sm font-bold tracking-tight">{account.name}</p>
@@ -1222,37 +1225,37 @@ export default function App() {
           </Card>
 
           {/* Investments */}
-          <Card className="relative overflow-hidden border-white/5">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                  <TrendingUp size={20} />
+          <Card className="relative overflow-hidden border-white/5 p-10">
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-indigo-500/10 rounded-2xl text-indigo-400">
+                  <TrendingUp size={28} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-display font-bold tracking-tight">Investments</h3>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Growth Portfolio</p>
+                  <h3 className="text-2xl font-display font-bold tracking-tight">Investments</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Growth Portfolio</p>
                 </div>
               </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
                 variant="secondary"
-                className="p-2 rounded-lg"
+                className="p-3 rounded-2xl"
               >
-                <Plus size={16} />
+                <Plus size={20} />
               </Button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {investments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                  <TrendingUp size={48} className="mb-4 opacity-10" />
-                  <p className="text-sm font-medium">No investments added</p>
+                <div className="flex flex-col items-center justify-center py-16 text-white/10">
+                  <TrendingUp size={64} className="mb-6 opacity-10" />
+                  <p className="text-base font-medium">No investments added</p>
                 </div>
               ) : (
                 investments.map(inv => (
                   <motion.div 
                     key={inv.id}
                     whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all"
+                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-indigo-500/30 transition-all"
                   >
                     <div>
                       <p className="text-sm font-bold tracking-tight">{inv.name}</p>
@@ -1282,37 +1285,37 @@ export default function App() {
           </Card>
 
           {/* Liabilities */}
-          <Card className="relative overflow-hidden border-white/5">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400">
-                  <CreditCard size={20} />
+          <Card className="relative overflow-hidden border-white/5 p-10">
+            <div className="flex items-center justify-between mb-12">
+              <div className="flex items-center gap-5">
+                <div className="p-4 bg-rose-500/10 rounded-2xl text-rose-400">
+                  <CreditCard size={28} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-display font-bold tracking-tight">Liabilities</h3>
-                  <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding Debt</p>
+                  <h3 className="text-2xl font-display font-bold tracking-tight">Liabilities</h3>
+                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Outstanding Debt</p>
                 </div>
               </div>
               <Button 
                 onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
                 variant="secondary"
-                className="p-2 rounded-lg"
+                className="p-3 rounded-2xl"
               >
-                <Plus size={16} />
+                <Plus size={20} />
               </Button>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-6">
               {liabilities.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                  <CreditCard size={48} className="mb-4 opacity-10" />
-                  <p className="text-sm font-medium">No liabilities added</p>
+                <div className="flex flex-col items-center justify-center py-16 text-white/10">
+                  <CreditCard size={64} className="mb-6 opacity-10" />
+                  <p className="text-base font-medium">No liabilities added</p>
                 </div>
               ) : (
                 liabilities.map(debt => (
                   <motion.div 
                     key={debt.id}
                     whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-rose-500/30 transition-all"
+                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-rose-500/30 transition-all"
                   >
                     <div>
                       <p className="text-sm font-bold tracking-tight">{debt.name}</p>
