@@ -2,6 +2,7 @@ export interface Account {
   id: string;
   userId: string;
   name: string;
+  username?: string;
   balance: number;
   updatedAt: string;
 }
@@ -43,14 +44,4 @@ export interface UserProfile {
   displayName: string;
   photoURL: string;
   createdAt: string;
-}
-
-export interface Information {
-  id: string;
-  userId: string;
-  type: 'bank' | 'ewallet' | 'crypto' | 'rdn';
-  provider: string;
-  accountNumber: string;
-  accountName: string;
-  updatedAt: string;
 }
