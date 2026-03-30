@@ -17,8 +17,8 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth, signInWithGoogle, signInWithApple, logout, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, updateProfile, updateEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from './firebase';
-import { Account, Investment, Liability, Transaction, UserProfile } from './types';
+import { db, auth, signInWithGoogle, signInWithApple, logout, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from './firebase';
+import { Account, Investment, Liability, Transaction, UserProfile, Information } from './types';
 import { formatCurrency, cn } from './utils';
 import { 
   Wallet, 
@@ -45,11 +45,7 @@ import {
   Lock,
   User as UserIcon,
   ChevronRight,
-  ArrowLeft,
-  Settings,
-  Shield,
-  Key,
-  AtSign
+  ArrowLeft
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -174,15 +170,13 @@ const Button = ({
   onClick, 
   variant = 'primary', 
   className,
-  disabled,
-  type = 'button'
+  disabled
 }: { 
   children: React.ReactNode; 
   onClick?: () => void; 
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   className?: string;
   disabled?: boolean;
-  type?: 'button' | 'submit' | 'reset';
 }) => {
   const variants = {
     primary: "bg-luxury-accent text-black hover:brightness-110 shadow-lg shadow-luxury-accent/20",
@@ -197,7 +191,6 @@ const Button = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick} 
       disabled={disabled}
-      type={type}
       className={cn(
         "px-6 py-3 rounded-2xl font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2", 
         variants[variant], 
@@ -300,7 +293,6 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
@@ -308,27 +300,23 @@ export default function App() {
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [liabilities, setLiabilities] = useState<Liability[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [information, setInformation] = useState<Information[]>([]);
 
   // Tabs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'profile'>('dashboard');
-
-  // Profile Edit States
-  const [newUsername, setNewUsername] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [isReauthModalOpen, setIsReauthModalOpen] = useState(false);
-  const [reauthAction, setReauthAction] = useState<'email' | 'password' | null>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'information'>('dashboard');
 
   // Modals
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isInvestmentModalOpen, setIsInvestmentModalOpen] = useState(false);
   const [isLiabilityModalOpen, setIsLiabilityModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
+  const [isInformationModalOpen, setIsInformationModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
+  const [selectedInfoId, setSelectedInfoId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const copyToClipboard = (text: string) => {
@@ -386,11 +374,18 @@ export default function App() {
       handleFirestoreError(err, OperationType.GET, `users/${user.uid}/transactions`);
     });
 
+    const unsubInformation = onSnapshot(collection(db, `users/${user.uid}/information`), (s) => {
+      setInformation(s.docs.map(doc => ({ id: doc.id, ...doc.data() } as Information)));
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, `users/${user.uid}/information`);
+    });
+
     return () => {
       unsubAccounts();
       unsubInvestments();
       unsubLiabilities();
       unsubTransactions();
+      unsubInformation();
     };
   }, [user]);
 
@@ -418,23 +413,16 @@ export default function App() {
     if (!user) return;
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
-    const accountUsername = formData.get('username') as string;
     const balance = Number(formData.get('balance'));
 
     try {
       if (editingItem) {
-        await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { 
-          name, 
-          username: accountUsername,
-          balance, 
-          updatedAt: new Date().toISOString() 
-        });
+        await updateDoc(doc(db, `users/${user.uid}/accounts`, editingItem.id), { name, balance, updatedAt: new Date().toISOString() });
         setNotification({ message: 'Account updated successfully', type: 'success' });
       } else {
         await addDoc(collection(db, `users/${user.uid}/accounts`), {
           userId: user.uid,
           name,
-          username: accountUsername,
           balance,
           updatedAt: new Date().toISOString()
         });
@@ -500,6 +488,43 @@ export default function App() {
       setEditingItem(null);
     } catch (err) {
       handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/liabilities`);
+    }
+  };
+
+  const handleAddInformation = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!user) return;
+    const formData = new FormData(e.currentTarget);
+    const type = formData.get('type') as Information['type'];
+    const provider = formData.get('provider') as string;
+    const accountNumber = formData.get('accountNumber') as string;
+    const accountName = formData.get('accountName') as string;
+
+    try {
+      if (editingItem) {
+        await updateDoc(doc(db, `users/${user.uid}/information`, editingItem.id), { 
+          type, 
+          provider, 
+          accountNumber, 
+          accountName, 
+          updatedAt: new Date().toISOString() 
+        });
+        setNotification({ message: 'Information updated successfully', type: 'success' });
+      } else {
+        await addDoc(collection(db, `users/${user.uid}/information`), {
+          userId: user.uid,
+          type,
+          provider,
+          accountNumber,
+          accountName,
+          updatedAt: new Date().toISOString()
+        });
+        setNotification({ message: 'Information added successfully', type: 'success' });
+      }
+      setIsInformationModalOpen(false);
+      setEditingItem(null);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, `users/${user.uid}/information`);
     }
   };
 
@@ -684,12 +709,31 @@ export default function App() {
     }
   };
 
+  const clearAllData = async () => {
+    if (!user) return;
+    
+    try {
+      const batch = writeBatch(db);
+      
+      // Add all items to batch
+      accounts.forEach(item => batch.delete(doc(db, `users/${user.uid}/accounts`, item.id)));
+      investments.forEach(item => batch.delete(doc(db, `users/${user.uid}/investments`, item.id)));
+      liabilities.forEach(item => batch.delete(doc(db, `users/${user.uid}/liabilities`, item.id)));
+      transactions.forEach(item => batch.delete(doc(db, `users/${user.uid}/transactions`, item.id)));
+      information.forEach(item => batch.delete(doc(db, `users/${user.uid}/information`, item.id)));
+      
+      await batch.commit();
+      
+      setIsClearAllConfirmOpen(false);
+      setNotification({ message: 'All data cleared successfully', type: 'success' });
+    } catch (err) {
+      console.error("Error clearing data:", err);
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}`);
+    }
+  };
+
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isLoginMode && !username) {
-      setNotification({ message: "Please enter a username", type: 'error' });
-      return;
-    }
     if (!email || !password) {
       setNotification({ message: "Please fill in all fields", type: 'error' });
       return;
@@ -699,10 +743,7 @@ export default function App() {
       if (isLoginMode) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(userCredential.user, { displayName: username });
-        // Force refresh user state
-        setUser({ ...userCredential.user, displayName: username });
+        await createUserWithEmailAndPassword(auth, email, password);
       }
     } catch (error: any) {
       console.error("Auth Error:", error);
@@ -712,73 +753,6 @@ export default function App() {
       if (error.code === 'auth/email-already-in-use') message = "Email already in use.";
       if (error.code === 'auth/weak-password') message = "Password should be at least 6 characters.";
       setNotification({ message, type: 'error' });
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleUpdateProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-    setAuthLoading(true);
-    try {
-      if (newUsername && newUsername !== user.displayName) {
-        await updateProfile(user, { displayName: newUsername });
-        setNotification({ message: 'Username updated successfully', type: 'success' });
-      }
-      
-      if (newEmail && newEmail !== user.email) {
-        setReauthAction('email');
-        setIsReauthModalOpen(true);
-        setAuthLoading(false);
-        return;
-      }
-
-      if (newPassword) {
-        setReauthAction('password');
-        setIsReauthModalOpen(true);
-        setAuthLoading(false);
-        return;
-      }
-
-      // Refresh user state
-      setUser({ ...auth.currentUser } as User);
-      setNewUsername('');
-      setNewEmail('');
-      setNewPassword('');
-    } catch (error: any) {
-      console.error("Profile Update Error:", error);
-      setNotification({ message: error.message, type: 'error' });
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleReauthenticate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !user.email) return;
-    setAuthLoading(true);
-    try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      
-      if (reauthAction === 'email') {
-        await updateEmail(user, newEmail);
-        setNotification({ message: 'Email updated successfully', type: 'success' });
-      } else if (reauthAction === 'password') {
-        await updatePassword(user, newPassword);
-        setNotification({ message: 'Password updated successfully', type: 'success' });
-      }
-
-      setIsReauthModalOpen(false);
-      setCurrentPassword('');
-      setReauthAction(null);
-      setNewEmail('');
-      setNewPassword('');
-      setUser({ ...auth.currentUser } as User);
-    } catch (error: any) {
-      console.error("Reauth Error:", error);
-      setNotification({ message: error.message, type: 'error' });
     } finally {
       setAuthLoading(false);
     }
@@ -942,19 +916,6 @@ export default function App() {
                   onSubmit={handleEmailAuth}
                   className="space-y-4"
                 >
-                  {!isLoginMode && (
-                    <div className="relative">
-                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
-                      <input
-                        type="text"
-                        placeholder="Username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-luxury-accent/50 transition-all"
-                        required
-                      />
-                    </div>
-                  )}
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
                     <input
@@ -1070,26 +1031,44 @@ export default function App() {
                 <span className="text-2xl font-display font-bold tracking-tighter">LuxWealth</span>
               </div>
               
-
+              <div className="hidden md:flex items-center gap-8">
+                <button 
+                  onClick={() => setActiveTab('dashboard')}
+                  className={cn(
+                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
+                    activeTab === 'dashboard' ? "text-luxury-accent" : "text-white/40"
+                  )}
+                >
+                  Dashboard
+                </button>
+                <button 
+                  onClick={() => setActiveTab('information')}
+                  className={cn(
+                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
+                    activeTab === 'information' ? "text-luxury-accent" : "text-white/40"
+                  )}
+                >
+                  Accounts
+                </button>
+              </div>
 
               <div className="flex items-center gap-4">
                 <div className="hidden sm:flex flex-col items-end mr-2">
                   <span className="text-sm font-bold">{userDisplayName}</span>
                   <span className="text-[10px] text-white/40 uppercase tracking-widest">Premium Member</span>
                 </div>
+                <img 
+                  src={userPhotoURL} 
+                  className="w-10 h-10 rounded-xl border border-white/10"
+                  alt="Avatar"
+                  referrerPolicy="no-referrer"
+                />
                 <button 
-                  onClick={() => setActiveTab('profile')}
-                  className="transition-transform hover:scale-105 active:scale-95"
+                  onClick={() => setIsClearAllConfirmOpen(true)}
+                  className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-orange-400"
+                  title="Clear All Data"
                 >
-                  <img 
-                    src={userPhotoURL} 
-                    className={cn(
-                      "w-10 h-10 rounded-xl border transition-all",
-                      activeTab === 'profile' ? "border-luxury-accent shadow-lg shadow-luxury-accent/20" : "border-white/10 hover:border-white/30"
-                    )}
-                    alt="Avatar"
-                    referrerPolicy="no-referrer"
-                  />
+                  <RefreshCcw size={20} />
                 </button>
                 <button 
                   onClick={() => logout()}
@@ -1206,7 +1185,7 @@ export default function App() {
             </section>
 
         {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-24">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
           <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden p-10">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
             <div className="flex items-center justify-between mb-12">
@@ -1380,9 +1359,6 @@ export default function App() {
                   >
                     <div>
                       <p className="text-sm font-bold tracking-tight">{account.name}</p>
-                      {account.username && (
-                        <p className="text-[10px] text-white/30 font-medium mb-1">{account.username}</p>
-                      )}
                       <p className="text-lg font-display font-bold text-emerald-400">{formatCurrency(account.balance)}</p>
                     </div>
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1638,112 +1614,107 @@ export default function App() {
         </Card>
       </>
     ) : (
-      <div className="max-w-2xl mx-auto space-y-12">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className="flex items-center gap-2 text-white/40 hover:text-luxury-accent transition-colors group"
-          >
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span className="text-sm font-bold uppercase tracking-widest">Back to Dashboard</span>
-          </button>
-          <div className="space-y-2">
-            <h2 className="text-4xl font-display font-bold tracking-tight">Profile Management</h2>
-            <p className="text-white/40 text-lg">Update your personal information and security settings.</p>
-          </div>
-        </motion.div>
-
-        <div className="grid gap-8">
-          {/* Profile Card */}
-          <Card className="p-8 border-white/5 bg-white/5 backdrop-blur-xl">
-            <div className="flex items-center gap-6 mb-10">
-              <div className="relative group">
-                <img 
-                  src={userPhotoURL} 
-                  alt={userDisplayName} 
-                  className="w-24 h-24 rounded-[2rem] object-cover border-4 border-luxury-accent/20 group-hover:border-luxury-accent transition-all duration-500"
-                />
-                <div className="absolute inset-0 bg-black/40 rounded-[2rem] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Edit2 size={20} className="text-white" />
-                </div>
-              </div>
+      <div className="space-y-8">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-display font-bold">{userDisplayName}</h3>
-                <p className="text-white/40 font-mono text-sm">{user.email}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="px-3 py-1 bg-luxury-accent/10 text-luxury-accent text-[10px] font-bold uppercase tracking-widest rounded-full border border-luxury-accent/20">
-                    Premium Member
-                  </span>
-                </div>
+                <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Banking & E-Wallet</h2>
+                <p className="text-white/40 max-w-md">Securely manage your account numbers and digital wallet credentials for quick reference.</p>
               </div>
+              <Button 
+                onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}
+                className="bg-emerald-500 text-black hover:bg-emerald-400 py-3 px-6 rounded-2xl font-bold tracking-tight transition-all active:scale-95 flex items-center gap-2"
+              >
+                <Plus size={18} /> Add New Info
+              </Button>
             </div>
 
-            <form onSubmit={handleUpdateProfile} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Username</label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
-                    <input 
-                      type="text"
-                      placeholder="New Username"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-luxury-accent/50 transition-all"
-                    />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {information.length === 0 ? (
+                <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/5 rounded-[2rem] border border-dashed border-white/10">
+                  <div className="p-4 bg-white/5 rounded-full mb-4">
+                    <CreditCard size={32} className="text-white/20" />
                   </div>
+                  <p className="text-white/40 font-medium">No banking information added yet</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1">Email Address</label>
-                  <div className="relative">
-                    <AtSign className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
-                    <input 
-                      type="email"
-                      placeholder="New Email"
-                      value={newEmail}
-                      onChange={(e) => setNewEmail(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-luxury-accent/50 transition-all"
-                    />
-                  </div>
-                </div>
-              </div>
+              ) : (
+                information.map((info) => (
+                  <motion.div
+                    key={info.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ y: -4 }}
+                    className={cn(
+                      "group relative p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer",
+                      selectedInfoId === info.id && "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
+                    )}
+                    onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
+                  >
+                    <div className="flex items-start justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "p-3 rounded-2xl text-white/60 group-hover:text-emerald-400 transition-colors",
+                          info.type === 'bank' ? "bg-blue-500/10" : 
+                          info.type === 'ewallet' ? "bg-emerald-500/10" :
+                          info.type === 'crypto' ? "bg-orange-500/10" :
+                          "bg-purple-500/10"
+                        )}>
+                          {info.type === 'bank' ? <Wallet size={24} /> : 
+                           info.type === 'ewallet' ? <CreditCard size={24} /> :
+                           info.type === 'crypto' ? <TrendingUp size={24} /> :
+                           <LayoutDashboard size={24} />}
+                        </div>
+                        <div>
+                          <h3 className="font-bold tracking-tight">{info.provider}</h3>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest">{info.type}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
+                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); deleteItem('information', info.id); }}
+                          className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest ml-1 text-rose-400/60">Security</label>
-                <div className="relative">
-                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
-                  <input 
-                    type="password"
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-rose-500/50 transition-all"
-                  />
-                </div>
-                <p className="text-[10px] text-white/20 mt-2 ml-1 italic">Leave blank to keep current password.</p>
-              </div>
-
-              <div className="pt-4">
-                <Button 
-                  type="submit" 
-                  disabled={authLoading}
-                  className="w-full py-5 rounded-2xl bg-luxury-accent text-black font-bold tracking-tight hover:bg-luxury-accent/80 transition-all shadow-xl shadow-luxury-accent/10"
-                >
-                  {authLoading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Save Profile Changes"}
-                </Button>
-              </div>
-            </form>
-          </Card>
-
-
-        </div>
-      </div>
-    )}
-  </main>
+                    <div className="space-y-4">
+                      <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
+                        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Number / Phone</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-lg font-mono font-medium tracking-wider text-white/80">
+                            {selectedInfoId === info.id ? info.accountNumber : info.accountNumber.replace(/.(?=.{4})/g, '•')}
+                          </p>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); copyToClipboard(info.accountNumber); }}
+                            className="p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-emerald-400 transition-colors"
+                          >
+                            <Copy size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      {info.accountName && (
+                        <div>
+                          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Name</p>
+                          <p className="font-bold tracking-tight text-white/60 uppercase">{info.accountName}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </main>
 
       {/* Modals */}
       <Modal 
@@ -1760,15 +1731,6 @@ export default function App() {
                 defaultValue={editingItem?.name}
                 required 
                 placeholder="e.g. BCA, BRI, Cash"
-                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Username (Optional)</label>
-              <input 
-                name="username" 
-                defaultValue={editingItem?.username}
-                placeholder="e.g. @ananda123"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
               />
             </div>
@@ -1969,30 +1931,58 @@ export default function App() {
       </Modal>
 
       <Modal 
-        isOpen={isReauthModalOpen} 
-        onClose={() => setIsReauthModalOpen(false)} 
-        title="Security Verification"
+        isOpen={isInformationModalOpen} 
+        onClose={() => { 
+          setIsInformationModalOpen(false); 
+          setEditingItem(null);
+        }} 
+        title={editingItem ? "Edit Information" : "Add Information"}
       >
-        <form onSubmit={handleReauthenticate} className="space-y-6">
-          <div className="space-y-4">
-            <p className="text-sm text-white/40">For your security, please enter your current password to confirm these changes.</p>
-            <div>
-              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Current Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
-                <input 
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required 
-                  placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/10 focus:outline-none focus:border-luxury-accent/50 transition-all"
-                />
-              </div>
-            </div>
+        <form onSubmit={handleAddInformation} className="space-y-6">
+          <div>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Type</label>
+            <select 
+              name="type" 
+              defaultValue={editingItem?.type || 'bank'} 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-emerald-500/50 transition-all appearance-none"
+            >
+              <option value="bank" className="bg-[#0a0a0a]">Bank Account</option>
+              <option value="ewallet" className="bg-[#0a0a0a]">E-Wallet</option>
+              <option value="crypto" className="bg-[#0a0a0a]">Crypto Wallet</option>
+              <option value="rdn" className="bg-[#0a0a0a]">RDN Account</option>
+            </select>
           </div>
-          <Button disabled={authLoading} className="w-full py-5 rounded-2xl bg-luxury-accent text-black font-bold tracking-tight hover:bg-luxury-accent/80 transition-all active:scale-[0.98]">
-            {authLoading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Confirm & Update"}
+          <div>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Provider Name</label>
+            <input 
+              name="provider" 
+              defaultValue={editingItem?.provider} 
+              required 
+              placeholder="e.g. BCA, Mandiri, GoPay, OVO" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Account Number / Phone</label>
+            <input 
+              name="accountNumber" 
+              defaultValue={editingItem?.accountNumber} 
+              required 
+              placeholder="e.g. 1234567890" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Account Name</label>
+            <input 
+              name="accountName" 
+              defaultValue={editingItem?.accountName} 
+              placeholder="e.g. John Doe" 
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+            />
+          </div>
+          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+            Save Information
           </Button>
         </form>
       </Modal>
@@ -2026,6 +2016,37 @@ export default function App() {
               className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all active:scale-[0.98]"
             >
               Delete
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal 
+        isOpen={isClearAllConfirmOpen} 
+        onClose={() => setIsClearAllConfirmOpen(false)} 
+        title="Clear All Data"
+      >
+        <div className="space-y-6">
+          <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl">
+            <p className="text-white/80 text-center leading-relaxed font-bold">
+              WARNING: This will permanently delete ALL your accounts, investments, liabilities, and transactions.
+            </p>
+            <p className="text-white/60 text-center text-xs mt-2">
+              This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => setIsClearAllConfirmOpen(false)} 
+              className="flex-1 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={clearAllData} 
+              className="flex-1 py-4 rounded-2xl bg-red-500 text-white font-bold hover:bg-red-400 transition-all active:scale-[0.98]"
+            >
+              Clear Everything
             </Button>
           </div>
         </div>
