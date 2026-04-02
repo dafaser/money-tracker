@@ -1384,7 +1384,7 @@ export default function App() {
                 </Button>
               </div>
 
-              <div className="flex-1 space-y-4">
+              <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {accounts.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-white/10">
                     <Wallet size={48} className="mb-4 opacity-10" />
@@ -1452,14 +1452,14 @@ export default function App() {
                   </Button>
                 </div>
 
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {investments.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-white/10">
                       <TrendingUp size={48} className="mb-4 opacity-10" />
                       <p className="text-sm font-medium">No investments</p>
                     </div>
                   ) : (
-                    investments.slice(0, 4).map(inv => (
+                    investments.map(inv => (
                       <motion.div 
                         key={inv.id}
                         whileHover={{ x: 4 }}
@@ -1485,11 +1485,6 @@ export default function App() {
                         </div>
                       </motion.div>
                     ))
-                  )}
-                  {investments.length > 4 && (
-                    <p className="text-[10px] text-center text-white/20 font-bold uppercase tracking-widest pt-2">
-                      + {investments.length - 4} more investments
-                    </p>
                   )}
                 </div>
                 
@@ -1520,14 +1515,14 @@ export default function App() {
                   </Button>
                 </div>
 
-                <div className="flex-1 space-y-4">
+                <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {liabilities.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-white/10">
                       <CreditCard size={48} className="mb-4 opacity-10" />
                       <p className="text-sm font-medium">No liabilities</p>
                     </div>
                   ) : (
-                    liabilities.slice(0, 4).map(debt => (
+                    liabilities.map(debt => (
                       <motion.div 
                         key={debt.id}
                         whileHover={{ x: 4 }}
