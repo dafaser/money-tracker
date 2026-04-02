@@ -36,55 +36,51 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-          (request.auth.token.email == "Anandafa123@gmail.com" && request.auth.token.email_verified == true));
+        (request.auth.token.email == "Anandafa123@gmail.com" && request.auth.token.email_verified == true ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', 'user') == 'admin'));
     }
 
     function isValidUser(data) {
-      return data.keys().hasAll(['uid', 'email']) &&
-             data.uid is string &&
-             data.email is string;
+      return data.get('uid', '') is string &&
+             data.get('email', '') is string;
     }
 
     function isValidAccount(data) {
-      return data.keys().hasAll(['userId', 'name', 'balance']) &&
-             data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.balance is number;
+      return data.get('userId', '') == request.auth.uid &&
+             data.get('name', '') is string && data.get('name', '').size() > 0 &&
+             data.get('balance', 0) is number;
     }
 
     function isValidInvestment(data) {
-      return data.keys().hasAll(['userId', 'name', 'value']) &&
-             data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.value is number;
+      return data.get('userId', '') == request.auth.uid &&
+             data.get('name', '') is string && data.get('name', '').size() > 0 &&
+             data.get('value', 0) is number;
     }
 
     function isValidLiability(data) {
-      return data.keys().hasAll(['userId', 'name', 'amount']) &&
-             data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
-             data.amount is number;
+      return data.get('userId', '') == request.auth.uid &&
+             data.get('name', '') is string && data.get('name', '').size() > 0 &&
+             data.get('amount', 0) is number;
     }
 
     function isValidTransaction(data) {
-      return data.keys().hasAll(['userId', 'date', 'amount', 'type', 'accountId']) &&
-             data.userId == request.auth.uid &&
-             data.amount is number &&
-             data.type in ['income', 'expense', 'debt_payment', 'debt_expense', 'investment_deposit', 'investment_withdrawal'];
+      return data.get('userId', '') == request.auth.uid &&
+             data.get('amount', 0) is number &&
+             data.get('type', '') in ['income', 'expense', 'debt_payment', 'debt_expense', 'investment_deposit', 'investment_withdrawal'];
     }
 
     function isValidInformation(data) {
-      return data.keys().hasAll(['userId', 'type', 'provider', 'accountNumber']) &&
-             data.userId == request.auth.uid &&
-             data.type in ['bank', 'ewallet', 'crypto', 'rdn'] &&
-             data.provider is string && data.provider.size() > 0 && data.provider.size() < 100 &&
-             data.accountNumber is string && data.accountNumber.size() > 0 && data.accountNumber.size() < 100;
+      return data.get('userId', '') == request.auth.uid &&
+             data.get('type', '') in ['bank', 'ewallet', 'crypto', 'rdn'] &&
+             data.get('provider', '') is string &&
+             data.get('accountNumber', '') is string;
     }
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create, update: if isOwner(userId) && isValidUser(request.resource.data);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data);
       
       match /accounts/{accountId} {
         allow read: if isOwner(userId) || isAdmin();

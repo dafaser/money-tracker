@@ -17,7 +17,7 @@ import {
   writeBatch
 } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { db, auth, signInWithGoogle, signInWithApple, logout, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from './firebase';
+import { db, auth, signInWithGoogle, signInWithApple, logout, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, updateProfile, updateEmail, updatePassword } from './firebase';
 import { Account, Investment, Liability, Transaction, UserProfile, Information } from './types';
 import { formatCurrency, cn } from './utils';
 import { 
@@ -31,7 +31,6 @@ import {
   ArrowUpRight, 
   ArrowDownLeft,
   PieChart as PieChartIcon,
-  BarChart3,
   History,
   X,
   AlertCircle,
@@ -52,14 +51,7 @@ import {
   Pie, 
   Cell, 
   ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
   Tooltip, 
-  Legend,
-  LabelList,
-  CartesianGrid
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -286,6 +278,124 @@ const Notification = ({ message, type, onClose }: { message: string; type: 'succ
   );
 };
 
+const ProfileView = ({ 
+  user, 
+  onBack, 
+  setNotification,
+  onClearAll 
+}: { 
+  user: User; 
+  onBack: () => void; 
+  setNotification: (n: { message: string; type: 'success' | 'error' } | null) => void;
+  onClearAll: () => void;
+}) => {
+  const [newUsername, setNewUsername] = useState(user.displayName || '');
+  const [newEmail, setNewEmail] = useState(user.email || '');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (newUsername !== user.displayName) {
+        await updateProfile(user, { displayName: newUsername });
+      }
+      if (newEmail !== user.email) {
+        await updateEmail(user, newEmail);
+      }
+      if (newPassword) {
+        await updatePassword(user, newPassword);
+      }
+      setNotification({ message: 'Profile updated successfully', type: 'success' });
+      onBack();
+    } catch (error: any) {
+      setNotification({ message: error.message, type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-2xl mx-auto space-y-8"
+    >
+      <div className="flex items-center gap-4 mb-8">
+        <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-white">
+          <ArrowLeft size={24} />
+        </button>
+        <h2 className="text-3xl font-display font-bold tracking-tight">Profile Settings</h2>
+      </div>
+
+      <Card className="p-8">
+        <form onSubmit={handleUpdateProfile} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">Username</label>
+            <div className="relative">
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <input
+                type="text"
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                placeholder="Username"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">Email Address</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                placeholder="Email"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">New Password (leave blank to keep current)</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                placeholder="New Password"
+              />
+            </div>
+          </div>
+
+          <Button disabled={loading} className="w-full py-4 text-lg">
+            {loading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Save Changes"}
+          </Button>
+        </form>
+      </Card>
+
+      <Card className="p-8 border-red-500/20 bg-red-500/5">
+        <div className="flex items-center justify-between gap-6">
+          <div>
+            <h3 className="text-xl font-bold text-red-500 mb-1">Danger Zone</h3>
+            <p className="text-white/40 text-sm">Once you clear all data, there is no going back. Please be certain.</p>
+          </div>
+          <Button variant="danger" onClick={onClearAll} className="whitespace-nowrap">
+            <Trash2 size={20} />
+            Clear All Data
+          </Button>
+        </div>
+      </Card>
+    </motion.div>
+  );
+};
+
+
 // --- Main App ---
 
 export default function App() {
@@ -293,8 +403,10 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [isResetMode, setIsResetMode] = useState(false);
+  const [isProfileView, setIsProfileView] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
@@ -302,8 +414,6 @@ export default function App() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [information, setInformation] = useState<Information[]>([]);
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'information'>('dashboard');
 
   // Modals
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
@@ -743,7 +853,15 @@ export default function App() {
       if (isLoginMode) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        await createUserWithEmailAndPassword(auth, email, password);
+        if (!username) {
+          setNotification({ message: "Please enter a username", type: 'error' });
+          setAuthLoading(false);
+          return;
+        }
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(userCredential.user, { displayName: username });
+        // Force refresh user state to get displayName immediately
+        setUser({ ...userCredential.user, displayName: username } as User);
       }
     } catch (error: any) {
       console.error("Auth Error:", error);
@@ -927,6 +1045,19 @@ export default function App() {
                       required
                     />
                   </div>
+                  {!isLoginMode && (
+                    <div className="relative">
+                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+                      <input
+                        type="text"
+                        placeholder="Username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:border-luxury-accent/50 transition-all"
+                        required
+                      />
+                    </div>
+                  )}
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
                     <input
@@ -1031,45 +1162,28 @@ export default function App() {
                 <span className="text-2xl font-display font-bold tracking-tighter">LuxWealth</span>
               </div>
               
-              <div className="hidden md:flex items-center gap-8">
-                <button 
-                  onClick={() => setActiveTab('dashboard')}
-                  className={cn(
-                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
-                    activeTab === 'dashboard' ? "text-luxury-accent" : "text-white/40"
-                  )}
-                >
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => setActiveTab('information')}
-                  className={cn(
-                    "text-sm font-semibold tracking-wider uppercase transition-all hover:text-luxury-accent",
-                    activeTab === 'information' ? "text-luxury-accent" : "text-white/40"
-                  )}
-                >
-                  Accounts
-                </button>
-              </div>
 
               <div className="flex items-center gap-4">
                 <div className="hidden sm:flex flex-col items-end mr-2">
                   <span className="text-sm font-bold">{userDisplayName}</span>
                   <span className="text-[10px] text-white/40 uppercase tracking-widest">Premium Member</span>
                 </div>
-                <img 
-                  src={userPhotoURL} 
-                  className="w-10 h-10 rounded-xl border border-white/10"
-                  alt="Avatar"
-                  referrerPolicy="no-referrer"
-                />
-                <button 
-                  onClick={() => setIsClearAllConfirmOpen(true)}
-                  className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-orange-400"
-                  title="Clear All Data"
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsProfileView(true)}
+                  className="w-10 h-10 rounded-xl border border-white/10 overflow-hidden relative group"
                 >
-                  <RefreshCcw size={20} />
-                </button>
+                  <img 
+                    src={userPhotoURL} 
+                    className="w-full h-full object-cover"
+                    alt="Avatar"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Edit2 size={12} className="text-white" />
+                  </div>
+                </motion.button>
                 <button 
                   onClick={() => logout()}
                   className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-red-400"
@@ -1083,76 +1197,41 @@ export default function App() {
         </nav>
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {activeTab === 'dashboard' ? (
-          <>
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-1"
-              >
-                <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
-                  Welcome back, <span className="text-luxury-accent">{userDisplayName.split(' ')[0]}</span>
-                </h1>
-                <p className="text-white/40 text-lg font-medium">Here's your financial overview for today.</p>
-              </motion.div>
-              
-              <div className="flex items-center gap-3">
-                <Button 
-                  onClick={() => setIsTransactionModalOpen(true)}
-                  className="px-8"
+          {isProfileView ? (
+            <ProfileView 
+              user={user} 
+              onBack={() => setIsProfileView(false)} 
+              setNotification={setNotification}
+              onClearAll={() => setIsClearAllConfirmOpen(true)}
+            />
+          ) : (
+            <div className="space-y-16">
+              {/* Header Section */}
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-1"
                 >
-                  <Plus size={18} className="mr-2" />
-                  New Transaction
-                </Button>
+                  <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
+                    Welcome back, <span className="text-luxury-accent">{userDisplayName.split(' ')[0]}</span>
+                  </h1>
+                  <p className="text-white/40 text-lg font-medium">Here's your financial overview for today.</p>
+                </motion.div>
+                
+                <div className="flex items-center gap-3">
+                  <Button 
+                    onClick={() => setIsTransactionModalOpen(true)}
+                    className="px-8"
+                  >
+                    <Plus size={18} className="mr-2" />
+                    New Transaction
+                  </Button>
+                </div>
               </div>
-            </div>
 
             {/* Stats Grid */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-12">
-              <Card className="relative overflow-hidden group border-white/5">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
-                      <Wallet size={20} />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Liquidity</span>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalCash)}</h3>
-                  <p className="text-[10px] text-emerald-400/60 font-medium">Available Cash</p>
-                </div>
-              </Card>
-
-              <Card className="relative overflow-hidden group border-white/5">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400">
-                      <TrendingUp size={20} />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Growth</span>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalInvestments)}</h3>
-                  <p className="text-[10px] text-indigo-400/60 font-medium">Total Investments</p>
-                </div>
-              </Card>
-
-              <Card className="relative overflow-hidden group border-white/5">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl group-hover:bg-rose-500/20 transition-all duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-rose-500/10 rounded-lg text-rose-400">
-                      <CreditCard size={20} />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Liabilities</span>
-                  </div>
-                  <h3 className="text-2xl font-display font-bold mb-1 tracking-tight">{formatCurrency(totalDebt)}</h3>
-                  <p className="text-[10px] text-rose-400/60 font-medium">Outstanding Debt</p>
-                </div>
-              </Card>
-
+            <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
               <Card className="relative overflow-hidden group border-white/5">
                 <div className="absolute -right-4 -top-4 w-24 h-24 bg-luxury-accent/10 rounded-full blur-2xl group-hover:bg-luxury-accent/20 transition-all duration-500" />
                 <div className="relative z-10">
@@ -1184,83 +1263,36 @@ export default function App() {
               </Card>
             </section>
 
-        {/* Charts Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          <Card className="lg:col-span-2 bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] relative overflow-hidden p-10">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-[#00e5c2]/50 to-transparent" />
-            <div className="flex items-center justify-between mb-12">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-luxury-accent/10 rounded-xl text-luxury-accent">
-                  <BarChart3 size={24} />
+        {/* Allocation Chart Section */}
+        <section className="mb-16">
+          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col md:flex-row relative overflow-hidden p-10 gap-10">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
+            
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-8">
+                <div className="p-3 bg-purple-500/10 rounded-xl">
+                  <PieChartIcon size={24} className="text-purple-400" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-display font-bold tracking-tight">Asset Allocation</h3>
-                  <p className="text-[11px] text-white/40 uppercase tracking-widest">Portfolio Distribution</p>
+                  <h3 className="font-bold text-xl text-[#e6e8eb]">Allocation</h3>
+                  <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
                 </div>
               </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {assetAllocationData.map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                      <span className="text-xs font-bold text-[#e6e8eb]/60 uppercase tracking-wider">{item.name}</span>
+                    </div>
+                    <span className="text-sm font-black text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="h-[340px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={assetAllocationData} margin={{ top: 30, right: 40, left: 40, bottom: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 'bold' }}
-                    dy={15}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11, fontWeight: 'bold' }}
-                    tickFormatter={(value) => formatCurrency(value).replace('Rp', '')}
-                    width={90}
-                  />
-                  <Tooltip 
-                    cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                    contentStyle={{ 
-                      backgroundColor: '#0f1115', 
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: '16px',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                      padding: '12px'
-                    }}
-                    itemStyle={{ color: '#fff' }}
-                    formatter={(value: number) => [formatCurrency(value), 'Value']}
-                  />
-                  <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={70}>
-                    {assetAllocationData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mt-12">
-              {assetAllocationData.map((item, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-white/40">{item.name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
 
-          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col relative overflow-hidden p-10">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
-            <div className="flex items-center gap-4 mb-12">
-              <div className="p-3 bg-purple-500/10 rounded-xl">
-                <PieChartIcon size={24} className="text-purple-400" />
-              </div>
-              <div>
-                <h3 className="font-bold text-xl text-[#e6e8eb]">Allocation</h3>
-                <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
-              </div>
-            </div>
-            <div className="h-[260px] w-full relative">
+            <div className="h-[260px] w-full md:w-[300px] relative">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                   <defs>
@@ -1308,196 +1340,208 @@ export default function App() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-auto pt-12 flex flex-col gap-4">
-              {assetAllocationData.slice(0, 4).map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all">
-                  <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-xs font-bold text-[#e6e8eb]/60 uppercase tracking-wider">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-black text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
-                </div>
-              ))}
-            </div>
           </Card>
         </section>
 
-        {/* Data Tables */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 mb-16">
-          {/* Cash Accounts */}
-          <Card className="relative overflow-hidden border-white/5 p-10">
-            <div className="flex items-center justify-between mb-12">
-              <div className="flex items-center gap-5">
-                <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-400">
-                  <Wallet size={28} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-display font-bold tracking-tight">Accounts</h3>
-                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Liquid Assets</p>
-                </div>
-              </div>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
-                variant="secondary"
-                className="p-3 rounded-2xl"
-              >
-                <Plus size={20} />
-              </Button>
+        {/* Asset Location - Bento Grid Redesign */}
+        <section className="space-y-8 mb-16">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+              <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Asset Portfolio</h2>
+              <p className="text-white/40 max-w-md">A comprehensive view of your wealth distribution across all locations and forms.</p>
             </div>
-            <div className="space-y-6">
-              {accounts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-white/10">
-                  <Wallet size={64} className="mb-6 opacity-10" />
-                  <p className="text-base font-medium">No accounts added</p>
-                </div>
-              ) : (
-                accounts.map(account => (
-                  <motion.div 
-                    key={account.id}
-                    whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-emerald-500/30 transition-all"
-                  >
-                    <div>
-                      <p className="text-sm font-bold tracking-tight">{account.name}</p>
-                      <p className="text-lg font-display font-bold text-emerald-400">{formatCurrency(account.balance)}</p>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
-                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        onClick={() => deleteItem('accounts', account.id)}
-                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </Card>
+          </div>
 
-          {/* Investments */}
-          <Card className="relative overflow-hidden border-white/5 p-10">
-            <div className="flex items-center justify-between mb-12">
-              <div className="flex items-center gap-5">
-                <div className="p-4 bg-indigo-500/10 rounded-2xl text-indigo-400">
-                  <TrendingUp size={28} />
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* Main Accounts Column - Bento Large */}
+            <Card className="lg:col-span-5 flex flex-col border-white/5 p-8 h-full">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                    <Wallet size={24} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-display font-bold tracking-tight">Liquid Assets</h3>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest">Cash & E-Wallets</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-2xl font-display font-bold tracking-tight">Investments</h3>
-                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Growth Portfolio</p>
-                </div>
+                <Button 
+                  onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
+                  variant="secondary"
+                  className="p-2 rounded-xl"
+                >
+                  <Plus size={18} />
+                </Button>
               </div>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
-                variant="secondary"
-                className="p-3 rounded-2xl"
-              >
-                <Plus size={20} />
-              </Button>
-            </div>
-            <div className="space-y-6">
-              {investments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-white/10">
-                  <TrendingUp size={64} className="mb-6 opacity-10" />
-                  <p className="text-base font-medium">No investments added</p>
-                </div>
-              ) : (
-                investments.map(inv => (
-                  <motion.div 
-                    key={inv.id}
-                    whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-indigo-500/30 transition-all"
-                  >
-                    <div>
-                      <p className="text-sm font-bold tracking-tight">{inv.name}</p>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/20">{inv.category}</span>
+
+              <div className="flex-1 space-y-4">
+                {accounts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                    <Wallet size={48} className="mb-4 opacity-10" />
+                    <p className="text-sm font-medium">No accounts added</p>
+                  </div>
+                ) : (
+                  accounts.map(account => (
+                    <motion.div 
+                      key={account.id}
+                      whileHover={{ x: 4 }}
+                      className="group flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-1 h-8 bg-emerald-500/20 rounded-full group-hover:bg-emerald-500 transition-colors" />
+                        <div>
+                          <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-0.5">{account.name}</p>
+                          <p className="text-xl font-display font-bold text-white tracking-tight">{formatCurrency(account.balance)}</p>
+                        </div>
                       </div>
-                      <p className="text-lg font-display font-bold text-indigo-400">{formatCurrency(inv.value)}</p>
-                    </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
-                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-indigo-400 transition-colors"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        onClick={() => deleteItem('investments', inv.id)}
-                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </motion.div>
-                ))
-              )}
-            </div>
-          </Card>
-
-          {/* Liabilities */}
-          <Card className="relative overflow-hidden border-white/5 p-10">
-            <div className="flex items-center justify-between mb-12">
-              <div className="flex items-center gap-5">
-                <div className="p-4 bg-rose-500/10 rounded-2xl text-rose-400">
-                  <CreditCard size={28} />
-                </div>
-                <div>
-                  <h3 className="text-2xl font-display font-bold tracking-tight">Liabilities</h3>
-                  <p className="text-xs text-white/40 uppercase tracking-[0.2em]">Outstanding Debt</p>
-                </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
+                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => deleteItem('accounts', account.id)}
+                          className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
               </div>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
-                variant="secondary"
-                className="p-3 rounded-2xl"
-              >
-                <Plus size={20} />
-              </Button>
-            </div>
-            <div className="space-y-6">
-              {liabilities.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-white/10">
-                  <CreditCard size={64} className="mb-6 opacity-10" />
-                  <p className="text-base font-medium">No liabilities added</p>
-                </div>
-              ) : (
-                liabilities.map(debt => (
-                  <motion.div 
-                    key={debt.id}
-                    whileHover={{ x: 4 }}
-                    className="group flex items-center justify-between p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-rose-500/30 transition-all"
-                  >
+              
+              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Liquidity</span>
+                <span className="text-lg font-display font-bold text-emerald-400">{formatCurrency(totalCash)}</span>
+              </div>
+            </Card>
+
+            {/* Investments & Liabilities Column */}
+            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Investments Bento */}
+              <Card className="flex flex-col border-white/5 p-8 h-full">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400">
+                      <TrendingUp size={24} />
+                    </div>
                     <div>
-                      <p className="text-sm font-bold tracking-tight">{debt.name}</p>
-                      <p className="text-lg font-display font-bold text-rose-400">{formatCurrency(debt.amount)}</p>
+                      <h3 className="text-xl font-display font-bold tracking-tight">Growth</h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Investments</p>
                     </div>
-                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
-                        className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        onClick={() => deleteItem('liabilities', debt.id)}
-                        className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                  </div>
+                  <Button 
+                    onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
+                    variant="secondary"
+                    className="p-2 rounded-xl"
+                  >
+                    <Plus size={18} />
+                  </Button>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  {investments.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                      <TrendingUp size={48} className="mb-4 opacity-10" />
+                      <p className="text-sm font-medium">No investments</p>
                     </div>
-                  </motion.div>
-                ))
-              )}
+                  ) : (
+                    investments.slice(0, 4).map(inv => (
+                      <motion.div 
+                        key={inv.id}
+                        whileHover={{ x: 4 }}
+                        className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{inv.name}</p>
+                          <p className="text-base font-display font-bold text-white truncate">{formatCurrency(inv.value)}</p>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                          <button 
+                            onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
+                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-indigo-400 transition-colors"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                  {investments.length > 4 && (
+                    <p className="text-[10px] text-center text-white/20 font-bold uppercase tracking-widest pt-2">
+                      + {investments.length - 4} more investments
+                    </p>
+                  )}
+                </div>
+                
+                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Growth</span>
+                  <span className="text-lg font-display font-bold text-indigo-400">{formatCurrency(totalInvestments)}</span>
+                </div>
+              </Card>
+
+              {/* Liabilities Bento */}
+              <Card className="flex flex-col border-white/5 p-8 h-full">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-rose-500/10 rounded-xl text-rose-400">
+                      <CreditCard size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-display font-bold tracking-tight">Liabilities</h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding Debt</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
+                    variant="secondary"
+                    className="p-2 rounded-xl"
+                  >
+                    <Plus size={18} />
+                  </Button>
+                </div>
+
+                <div className="flex-1 space-y-4">
+                  {liabilities.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                      <CreditCard size={48} className="mb-4 opacity-10" />
+                      <p className="text-sm font-medium">No liabilities</p>
+                    </div>
+                  ) : (
+                    liabilities.slice(0, 4).map(debt => (
+                      <motion.div 
+                        key={debt.id}
+                        whileHover={{ x: 4 }}
+                        className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-rose-500/30 transition-all"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{debt.name}</p>
+                          <p className="text-base font-display font-bold text-rose-400 truncate">{formatCurrency(debt.amount)}</p>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                          <button 
+                            onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
+                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                          >
+                            <Edit2 size={12} />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+                
+                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                  <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Debt</span>
+                  <span className="text-lg font-display font-bold text-rose-400">{formatCurrency(totalDebt)}</span>
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
+          </div>
+        </section>
 
         {/* Transactions History */}
         <Card className="relative overflow-hidden border-white/5">
@@ -1612,9 +1656,8 @@ export default function App() {
           </div>
           {transactions.length === 0 && <p className="text-center text-white/10 py-12">No transactions yet</p>}
         </Card>
-      </>
-    ) : (
-      <div className="space-y-8">
+
+        <div className="pt-16 border-t border-white/5 space-y-8">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <div>
                 <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Banking & E-Wallet</h2>
@@ -1713,8 +1756,9 @@ export default function App() {
               )}
             </div>
           </div>
-        )}
-      </main>
+        </div>
+      )}
+    </main>
 
       {/* Modals */}
       <Modal 

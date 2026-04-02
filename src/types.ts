@@ -2,6 +2,7 @@ export interface Account {
   id: string;
   userId: string;
   name: string;
+  username?: string;
   balance: number;
   updatedAt: string;
 }

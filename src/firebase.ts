@@ -7,7 +7,10 @@ import {
   signOut,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  updateProfile,
+  updateEmail,
+  updatePassword
 } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -22,4 +25,11 @@ export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const signInWithApple = () => signInWithPopup(auth, appleProvider);
 export const logout = () => signOut(auth);
 
-export { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail };
+export { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  sendPasswordResetEmail,
+  updateProfile,
+  updateEmail,
+  updatePassword
+};
