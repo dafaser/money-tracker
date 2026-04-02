@@ -162,13 +162,15 @@ const Button = ({
   onClick, 
   variant = 'primary', 
   className,
-  disabled
+  disabled,
+  type = 'button'
 }: { 
   children: React.ReactNode; 
   onClick?: () => void; 
   variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
   className?: string;
   disabled?: boolean;
+  type?: 'button' | 'submit' | 'reset';
 }) => {
   const variants = {
     primary: "bg-luxury-accent text-black hover:brightness-110 shadow-lg shadow-luxury-accent/20",
@@ -183,6 +185,7 @@ const Button = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick} 
       disabled={disabled}
+      type={type}
       className={cn(
         "px-6 py-3 rounded-2xl font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2", 
         variants[variant], 
@@ -1466,6 +1469,12 @@ export default function App() {
                           >
                             <Edit2 size={12} />
                           </button>
+                          <button 
+                            onClick={() => deleteItem('investments', inv.id)}
+                            className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       </motion.div>
                     ))
@@ -1527,6 +1536,12 @@ export default function App() {
                             className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
                           >
                             <Edit2 size={12} />
+                          </button>
+                          <button 
+                            onClick={() => deleteItem('liabilities', debt.id)}
+                            className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 size={12} />
                           </button>
                         </div>
                       </motion.div>
@@ -1790,7 +1805,7 @@ export default function App() {
               />
             </div>
           </div>
-          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+          <Button type="submit" className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
             {editingItem ? "Update Asset" : "Create Asset"}
           </Button>
         </form>
@@ -1842,7 +1857,7 @@ export default function App() {
               />
             </div>
           </div>
-          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+          <Button type="submit" className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
             {editingItem ? "Update Investment" : "Create Investment"}
           </Button>
         </form>
@@ -1877,7 +1892,7 @@ export default function App() {
               />
             </div>
           </div>
-          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+          <Button type="submit" className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
             {editingItem ? "Update Liability" : "Create Liability"}
           </Button>
         </form>
@@ -1968,7 +1983,7 @@ export default function App() {
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
-          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+          <Button type="submit" className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
             {editingItem ? "Update Transaction" : "Record Transaction"}
           </Button>
         </form>
@@ -2025,7 +2040,7 @@ export default function App() {
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
             />
           </div>
-          <Button className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
+          <Button type="submit" className="w-full py-5 rounded-2xl bg-emerald-500 text-black font-bold tracking-tight hover:bg-emerald-400 transition-all active:scale-[0.98]">
             Save Information
           </Button>
         </form>
