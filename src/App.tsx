@@ -285,12 +285,14 @@ const ProfileView = ({
   user, 
   onBack, 
   setNotification,
-  onClearAll 
+  onClearAll,
+  setUser
 }: { 
   user: User; 
   onBack: () => void; 
   setNotification: (n: { message: string; type: 'success' | 'error' } | null) => void;
   onClearAll: () => void;
+  setUser: (u: User | null) => void;
 }) => {
   const [newUsername, setNewUsername] = useState(user.displayName || '');
   const [newEmail, setNewEmail] = useState(user.email || '');
@@ -310,6 +312,10 @@ const ProfileView = ({
       if (newPassword) {
         await updatePassword(user, newPassword);
       }
+      
+      // Force refresh user state in App
+      setUser({ ...auth.currentUser } as User);
+      
       setNotification({ message: 'Profile updated successfully', type: 'success' });
       onBack();
     } catch (error: any) {
@@ -376,7 +382,7 @@ const ProfileView = ({
             </div>
           </div>
 
-          <Button disabled={loading} className="w-full py-4 text-lg">
+          <Button type="submit" disabled={loading} className="w-full py-4 text-lg">
             {loading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Save Changes"}
           </Button>
         </form>
@@ -1206,6 +1212,7 @@ export default function App() {
               onBack={() => setIsProfileView(false)} 
               setNotification={setNotification}
               onClearAll={() => setIsClearAllConfirmOpen(true)}
+              setUser={setUser}
             />
           ) : (
             <div className="space-y-16">
