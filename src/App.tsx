@@ -314,7 +314,14 @@ const ProfileView = ({
       }
       
       // Force refresh user state in App
-      setUser({ ...auth.currentUser } as User);
+      if (auth.currentUser) {
+        // Create a new object with the updated properties to ensure React detects the change
+        setUser({ 
+          ...auth.currentUser,
+          displayName: newUsername,
+          email: newEmail
+        } as User);
+      }
       
       setNotification({ message: 'Profile updated successfully', type: 'success' });
       onBack();
@@ -329,74 +336,74 @@ const ProfileView = ({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-2xl mx-auto space-y-8"
+      className="max-w-lg mx-auto space-y-6"
     >
-      <div className="flex items-center gap-4 mb-8">
+      <div className="flex items-center gap-4 mb-6">
         <button onClick={onBack} className="p-2 hover:bg-white/5 rounded-xl transition-colors text-white/40 hover:text-white">
-          <ArrowLeft size={24} />
+          <ArrowLeft size={20} />
         </button>
-        <h2 className="text-3xl font-display font-bold tracking-tight">Profile Settings</h2>
+        <h2 className="text-2xl font-display font-bold tracking-tight">Profile Settings</h2>
       </div>
 
-      <Card className="p-8">
-        <form onSubmit={handleUpdateProfile} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">Username</label>
+      <Card className="p-6">
+        <form onSubmit={handleUpdateProfile} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Username</label>
             <div className="relative">
-              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
               <input
                 type="text"
                 value={newUsername}
                 onChange={(e) => setNewUsername(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
                 placeholder="Username"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">Email Address</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Email Address</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
               <input
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
                 placeholder="Email"
               />
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-white/40 uppercase tracking-widest">New Password (leave blank to keep current)</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-white/40 uppercase tracking-widest">New Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-5 h-5" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20 w-4 h-4" />
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
+                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-white focus:outline-none focus:border-luxury-accent/50 transition-all"
                 placeholder="New Password"
               />
             </div>
           </div>
 
-          <Button type="submit" disabled={loading} className="w-full py-4 text-lg">
-            {loading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Save Changes"}
+          <Button type="submit" disabled={loading} className="w-full py-3 text-base mt-2">
+            {loading ? <RefreshCcw className="animate-spin w-4 h-4" /> : "Save Changes"}
           </Button>
         </form>
       </Card>
 
-      <Card className="p-8 border-red-500/20 bg-red-500/5">
-        <div className="flex items-center justify-between gap-6">
+      <Card className="p-6 border-red-500/20 bg-red-500/5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h3 className="text-xl font-bold text-red-500 mb-1">Danger Zone</h3>
-            <p className="text-white/40 text-sm">Once you clear all data, there is no going back. Please be certain.</p>
+            <h3 className="text-lg font-bold text-red-500 mb-0.5">Danger Zone</h3>
+            <p className="text-white/40 text-[10px]">Once you clear all data, there is no going back.</p>
           </div>
-          <Button variant="danger" onClick={onClearAll} className="whitespace-nowrap">
-            <Trash2 size={20} />
-            Clear All Data
+          <Button variant="danger" onClick={onClearAll} className="whitespace-nowrap py-2 px-4 text-xs">
+            <Trash2 size={16} />
+            Clear Data
           </Button>
         </div>
       </Card>
@@ -404,6 +411,61 @@ const ProfileView = ({
   );
 };
 
+
+const BottomNav = ({ activeTab, setActiveTab, onPlusClick }: { 
+  activeTab: string; 
+  setActiveTab: (tab: any) => void;
+  onPlusClick: () => void;
+}) => {
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-50 glass-dark border-t border-white/5 px-6 py-3 pb-8 sm:pb-4 flex justify-between items-center">
+      <div className="max-w-md mx-auto w-full flex justify-between items-center">
+        <button 
+          onClick={() => setActiveTab('dashboard')}
+          className={cn("flex flex-col items-center gap-1 transition-all duration-300", activeTab === 'dashboard' ? "text-luxury-accent scale-110" : "text-white/40 hover:text-white/60")}
+        >
+          <LayoutDashboard size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Home</span>
+        </button>
+        
+        <button 
+          onClick={() => setActiveTab('stats')}
+          className={cn("flex flex-col items-center gap-1 transition-all duration-300", activeTab === 'stats' ? "text-luxury-accent scale-110" : "text-white/40 hover:text-white/60")}
+        >
+          <PieChartIcon size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Stats</span>
+        </button>
+
+        <div className="relative -top-6">
+          <motion.button 
+            whileHover={{ scale: 1.1, rotate: 90 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={onPlusClick}
+            className="w-16 h-16 bg-luxury-accent rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(0,229,194,0.4)] text-black"
+          >
+            <Plus size={32} strokeWidth={3} />
+          </motion.button>
+        </div>
+
+        <button 
+          onClick={() => setActiveTab('transactions')}
+          className={cn("flex flex-col items-center gap-1 transition-all duration-300", activeTab === 'transactions' ? "text-luxury-accent scale-110" : "text-white/40 hover:text-white/60")}
+        >
+          <History size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">History</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('profile')}
+          className={cn("flex flex-col items-center gap-1 transition-all duration-300", activeTab === 'profile' ? "text-luxury-accent scale-110" : "text-white/40 hover:text-white/60")}
+        >
+          <UserIcon size={20} />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Profile</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // --- Main App ---
 
@@ -432,6 +494,7 @@ export default function App() {
   const [isInformationModalOpen, setIsInformationModalOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isClearAllConfirmOpen, setIsClearAllConfirmOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'stats' | 'transactions' | 'profile'>('dashboard');
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [deleteCollection, setDeleteCollection] = useState<string>('');
   const [activePieIndex, setActivePieIndex] = useState<number | null>(null);
@@ -809,14 +872,16 @@ export default function App() {
     if (!user || !itemToDelete) return;
 
     try {
+      const docId = typeof itemToDelete === 'string' ? itemToDelete : itemToDelete.id;
+      
       if (deleteCollection === 'transactions') {
         const tx = itemToDelete as Transaction;
         // Reverse balance impact
         await updateAccountBalance(tx.accountId, tx.type, tx.amount, true);
         // Delete transaction
-        await deleteDoc(doc(db, `users/${user.uid}/transactions`, tx.id));
+        await deleteDoc(doc(db, `users/${user.uid}/transactions`, docId));
       } else {
-        await deleteDoc(doc(db, `users/${user.uid}/${deleteCollection}`, itemToDelete.id));
+        await deleteDoc(doc(db, `users/${user.uid}/${deleteCollection}`, docId));
       }
       
       setIsDeleteConfirmOpen(false);
@@ -824,7 +889,8 @@ export default function App() {
       setDeleteCollection('');
     } catch (err) {
       console.error("Error deleting item:", err);
-      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/${deleteCollection}/${itemToDelete.id}`);
+      const docId = typeof itemToDelete === 'string' ? itemToDelete : itemToDelete.id;
+      handleFirestoreError(err, OperationType.DELETE, `users/${user.uid}/${deleteCollection}/${docId}`);
     }
   };
 
@@ -1180,7 +1246,7 @@ export default function App() {
                 <motion.button 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsProfileView(true)}
+                  onClick={() => setActiveTab('profile')}
                   className="w-10 h-10 rounded-xl border border-white/10 overflow-hidden relative group"
                 >
                   <img 
@@ -1205,577 +1271,584 @@ export default function App() {
           </div>
         </nav>
 
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {isProfileView ? (
-            <ProfileView 
-              user={user} 
-              onBack={() => setIsProfileView(false)} 
-              setNotification={setNotification}
-              onClearAll={() => setIsClearAllConfirmOpen(true)}
-              setUser={setUser}
-            />
-          ) : (
-            <div className="space-y-16">
-              {/* Header Section */}
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="space-y-1"
-                >
-                  <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
-                    Welcome back, <span className="text-luxury-accent">{userDisplayName.split(' ')[0]}</span>
-                  </h1>
-                  <p className="text-white/40 text-lg font-medium">Here's your financial overview for today.</p>
-                </motion.div>
-                
-                <div className="flex items-center gap-3">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-32">
+          {activeTab === 'profile' ? (
+            <div className="space-y-6">
+              <ProfileView 
+                user={user} 
+                onBack={() => setActiveTab('dashboard')} 
+                setNotification={setNotification}
+                onClearAll={() => setIsClearAllConfirmOpen(true)}
+                setUser={setUser}
+              />
+
+              <div className="pt-8 border-t border-white/5 space-y-6">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-display font-bold tracking-tight mb-1">Banking & E-Wallet</h2>
+                    <p className="text-white/40 text-xs max-w-md">Securely manage your account numbers and digital wallet credentials.</p>
+                  </div>
                   <Button 
-                    onClick={() => setIsTransactionModalOpen(true)}
-                    className="px-8"
+                    onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}
+                    className="bg-emerald-500 text-black hover:bg-emerald-400 py-2 px-4 rounded-xl text-sm font-bold tracking-tight transition-all active:scale-95 flex items-center gap-2"
                   >
-                    <Plus size={18} className="mr-2" />
-                    New Transaction
+                    <Plus size={16} /> Add New Info
                   </Button>
                 </div>
-              </div>
 
-            {/* Stats Grid */}
-            <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-              <Card className="relative overflow-hidden group border-white/5">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-luxury-accent/10 rounded-full blur-2xl group-hover:bg-luxury-accent/20 transition-all duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-luxury-accent/10 rounded-lg text-luxury-accent">
-                      <PieChartIcon size={20} />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {information.length === 0 ? (
+                    <div className="col-span-full py-10 flex flex-col items-center justify-center bg-white/5 rounded-2xl border border-dashed border-white/10">
+                      <div className="p-3 bg-white/5 rounded-full mb-3">
+                        <CreditCard size={24} className="text-white/20" />
+                      </div>
+                      <p className="text-xs text-white/40 font-medium">No banking information added yet</p>
                     </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Net Cash</span>
-                  </div>
-                  <h3 className={cn("text-2xl font-display font-bold mb-1 tracking-tight", netCash >= 0 ? "text-luxury-accent" : "text-rose-400")}>
-                    {formatCurrency(netCash)}
-                  </h3>
-                  <p className="text-[10px] text-white/20 font-medium">Cash - Debt</p>
-                </div>
-              </Card>
-
-              <Card className="relative overflow-hidden group bg-luxury-accent border-none text-black">
-                <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-all duration-500" />
-                <div className="relative z-10">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-2 bg-black/10 rounded-lg text-black">
-                      <TrendingUp size={20} />
-                    </div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-black/40">Net Worth</span>
-                  </div>
-                  <h3 className="text-3xl font-display font-bold mb-1 tracking-tight">{formatCurrency(netWorth)}</h3>
-                  <p className="text-[10px] text-black/40 font-bold">Total Portfolio Value</p>
-                </div>
-              </Card>
-            </section>
-
-        {/* Allocation Chart Section */}
-        <section className="mb-16">
-          <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col md:flex-row relative overflow-hidden p-10 gap-10">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-8">
-                <div className="p-3 bg-purple-500/10 rounded-xl">
-                  <PieChartIcon size={24} className="text-purple-400" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-xl text-[#e6e8eb]">Allocation</h3>
-                  <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {assetAllocationData.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                      <span className="text-xs font-bold text-[#e6e8eb]/60 uppercase tracking-wider">{item.name}</span>
-                    </div>
-                    <span className="text-sm font-black text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="h-[260px] w-full md:w-[300px] relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
-                  <defs>
-                    {assetAllocationData.map((entry, index) => (
-                      <linearGradient key={`grad-${index}`} id={`pieGrad-${index}`} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={entry.color} stopOpacity={1}/>
-                        <stop offset="100%" stopColor={entry.color} stopOpacity={0.6}/>
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <Pie
-                    data={assetAllocationData}
-                    innerRadius={70}
-                    outerRadius={95}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                    animationBegin={0}
-                    animationDuration={1800}
-                  >
-                    {assetAllocationData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`} 
-                        fill={`url(#pieGrad-${index})`}
-                        style={{ filter: `drop-shadow(0 0 8px ${entry.color}44)` }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        return (
-                          <div className="bg-[#1a1d23] border border-[#2a2e36] p-3 rounded-xl shadow-2xl backdrop-blur-xl">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: payload[0].payload.color }} />
-                              <p className="text-[10px] font-bold text-[#e6e8eb]/40 uppercase tracking-widest">{payload[0].name}</p>
+                  ) : (
+                    information.map((info) => (
+                      <motion.div
+                        key={info.id}
+                        layout
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        whileHover={{ y: -2 }}
+                        className={cn(
+                          "group relative p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer",
+                          selectedInfoId === info.id && "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_20px_rgba(16,185,129,0.1)]"
+                        )}
+                        onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "p-2 rounded-xl text-white/60 group-hover:text-emerald-400 transition-colors",
+                              info.type === 'bank' ? "bg-blue-500/10" : 
+                              info.type === 'ewallet' ? "bg-emerald-500/10" :
+                              info.type === 'crypto' ? "bg-orange-500/10" :
+                              "bg-purple-500/10"
+                            )}>
+                              {info.type === 'bank' ? <Wallet size={20} /> : 
+                               info.type === 'ewallet' ? <CreditCard size={20} /> :
+                               info.type === 'crypto' ? <TrendingUp size={20} /> :
+                               <LayoutDashboard size={20} />}
                             </div>
-                            <p className="text-sm font-black text-[#e6e8eb]">{formatCurrency(payload[0].value as number)}</p>
+                            <div>
+                              <h3 className="text-sm font-bold tracking-tight">{info.provider}</h3>
+                              <p className="text-[9px] text-white/40 uppercase tracking-widest">{info.type}</p>
+                            </div>
                           </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </section>
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
+                              className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); deleteItem('information', info.id); }}
+                              className="p-1.5 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
 
-        {/* Asset Location - Bento Grid Redesign */}
-        <section className="space-y-8 mb-16">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div>
-              <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Asset Portfolio</h2>
-              <p className="text-white/40 max-w-md">A comprehensive view of your wealth distribution across all locations and forms.</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Main Accounts Column - Bento Large */}
-            <Card className="lg:col-span-5 flex flex-col border-white/5 p-8 h-full">
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
-                    <Wallet size={24} />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-display font-bold tracking-tight">Liquid Assets</h3>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest">Cash & E-Wallets</p>
-                  </div>
+                        <div className="space-y-3">
+                          <div className="p-3 bg-black/20 rounded-xl border border-white/5">
+                            <p className="text-[9px] text-white/20 uppercase tracking-widest mb-1">Account Number / Phone</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-base font-mono font-medium tracking-wider text-white/80">
+                                {selectedInfoId === info.id ? info.accountNumber : info.accountNumber.replace(/.(?=.{4})/g, '•')}
+                              </p>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); copyToClipboard(info.accountNumber); }}
+                                className="p-1.5 hover:bg-white/5 rounded-lg text-white/20 hover:text-emerald-400 transition-colors"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
+                          </div>
+                          
+                          {info.accountName && (
+                            <div>
+                              <p className="text-[9px] text-white/20 uppercase tracking-widest mb-0.5">Account Name</p>
+                              <p className="text-xs font-bold tracking-tight text-white/60 uppercase">{info.accountName}</p>
+                            </div>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))
+                  )}
                 </div>
-                <Button 
-                  onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
-                  variant="secondary"
-                  className="p-2 rounded-xl"
-                >
-                  <Plus size={18} />
-                </Button>
               </div>
-
-              <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {accounts.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                    <Wallet size={48} className="mb-4 opacity-10" />
-                    <p className="text-sm font-medium">No accounts added</p>
+            </div>
+          ) : activeTab === 'stats' ? (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-display font-bold tracking-tight">Portfolio Analytics</h1>
+                <p className="text-white/40 text-sm font-medium">Detailed breakdown of your assets.</p>
+              </div>
+              {/* Allocation Chart Section */}
+              <section className="mb-8">
+                <Card className="bg-[#1a1d23]/50 backdrop-blur-xl border-[#2a2e36] flex flex-col md:flex-row relative overflow-hidden p-6 gap-6">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-right from-transparent via-purple-500/50 to-transparent" />
+                  
+                  <div className="flex-1">
+                    <div className="flex items-center gap-4 mb-8">
+                      <div className="p-3 bg-purple-500/10 rounded-xl">
+                        <PieChartIcon size={24} className="text-purple-400" />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-xl text-[#e6e8eb]">Allocation</h3>
+                        <p className="text-xs text-[#e6e8eb]/40">Portfolio diversification</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {assetAllocationData.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/[0.08] transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+                            <span className="text-xs font-bold text-[#e6e8eb]/60 uppercase tracking-wider">{item.name}</span>
+                          </div>
+                          <span className="text-sm font-black text-[#e6e8eb]">{item.percent.toFixed(1)}%</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ) : (
-                  accounts.map(account => (
-                    <motion.div 
-                      key={account.id}
-                      whileHover={{ x: 4 }}
-                      className="group flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all"
-                    >
+
+                  <div className="flex-1 flex items-center justify-center min-h-[200px]">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie
+                          data={assetAllocationData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={50}
+                          outerRadius={80}
+                          paddingAngle={8}
+                          dataKey="value"
+                          onMouseEnter={(_, index) => setActivePieIndex(index)}
+                          onMouseLeave={() => setActivePieIndex(null)}
+                        >
+                          {assetAllocationData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={entry.color} 
+                              stroke="none"
+                              style={{
+                                filter: activePieIndex === index ? `drop-shadow(0 0 12px ${entry.color}44)` : 'none',
+                                opacity: activePieIndex === null || activePieIndex === index ? 1 : 0.6,
+                                transition: 'all 0.3s ease'
+                              }}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="glass-dark p-4 rounded-2xl border border-white/10 shadow-2xl">
+                                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">{payload[0].name}</p>
+                                  <p className="text-lg font-display font-bold text-white">{formatCurrency(payload[0].value as number)}</p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Card>
+              </section>
+
+              {/* Asset Portfolio - Moved to Stats for better mobile UX */}
+              <section className="space-y-6 mb-8">
+                <div>
+                  <h2 className="text-2xl font-display font-bold tracking-tight mb-1">Asset Portfolio</h2>
+                  <p className="text-white/40 text-xs max-w-md">Detailed view of your wealth distribution.</p>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                  {/* Liquid Assets Column */}
+                  <Card className="lg:col-span-5 flex flex-col border-white/5 p-6 h-full">
+                    <div className="flex items-center justify-between mb-8">
                       <div className="flex items-center gap-4">
-                        <div className="w-1 h-8 bg-emerald-500/20 rounded-full group-hover:bg-emerald-500 transition-colors" />
+                        <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                          <Wallet size={24} />
+                        </div>
                         <div>
-                          <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-0.5">{account.name}</p>
-                          <p className="text-xl font-display font-bold text-white tracking-tight">{formatCurrency(account.balance)}</p>
+                          <h3 className="text-xl font-display font-bold tracking-tight">Liquid Assets</h3>
+                          <p className="text-[10px] text-white/40 uppercase tracking-widest">Cash & E-Wallets</p>
                         </div>
                       </div>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
-                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                      <Button 
+                        onClick={() => { setEditingItem(null); setIsAccountModalOpen(true); }} 
+                        variant="secondary"
+                        className="p-2 rounded-xl"
+                      >
+                        <Plus size={18} />
+                      </Button>
+                    </div>
+
+                    <div className="flex-1 space-y-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                      {accounts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                          <Wallet size={48} className="mb-4 opacity-10" />
+                          <p className="text-sm font-medium">No accounts added</p>
+                        </div>
+                      ) : (
+                        accounts.map(account => (
+                          <motion.div 
+                            key={account.id}
+                            whileHover={{ x: 4 }}
+                            className="group flex items-center justify-between p-5 bg-white/5 rounded-2xl border border-white/5 hover:border-emerald-500/30 transition-all"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="w-1 h-8 bg-emerald-500/20 rounded-full group-hover:bg-emerald-500 transition-colors" />
+                              <div>
+                                <p className="text-xs font-bold text-white/40 uppercase tracking-wider mb-0.5">{account.name}</p>
+                                <p className="text-xl font-display font-bold text-white tracking-tight">{formatCurrency(account.balance)}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button 
+                                onClick={() => { setEditingItem(account); setIsAccountModalOpen(true); }}
+                                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button 
+                                onClick={() => deleteItem('accounts', account.id)}
+                                className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </motion.div>
+                        ))
+                      )}
+                    </div>
+                    
+                    <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Liquidity</span>
+                      <span className="text-lg font-display font-bold text-emerald-400">{formatCurrency(totalCash)}</span>
+                    </div>
+                  </Card>
+
+                  {/* Investments & Liabilities Column */}
+                  <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Investments Bento */}
+                    <Card className="flex flex-col border-white/5 p-6 h-full">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400">
+                            <TrendingUp size={24} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-display font-bold tracking-tight">Growth</h3>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest">Investments</p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
+                          variant="secondary"
+                          className="p-2 rounded-xl"
                         >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={() => deleteItem('accounts', account.id)}
-                          className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                          <Plus size={18} />
+                        </Button>
                       </div>
-                    </motion.div>
-                  ))
-                )}
+
+                      <div className="flex-1 space-y-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        {investments.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                            <TrendingUp size={48} className="mb-4 opacity-10" />
+                            <p className="text-sm font-medium">No investments</p>
+                          </div>
+                        ) : (
+                          investments.map(inv => (
+                            <motion.div 
+                              key={inv.id}
+                              whileHover={{ x: 4 }}
+                              className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{inv.name}</p>
+                                <p className="text-base font-display font-bold text-white truncate">{formatCurrency(inv.value)}</p>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                <button 
+                                  onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
+                                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-indigo-400 transition-colors"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => deleteItem('investments', inv.id)}
+                                  className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))
+                        )}
+                      </div>
+                      
+                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Growth</span>
+                        <span className="text-lg font-display font-bold text-indigo-400">{formatCurrency(totalInvestments)}</span>
+                      </div>
+                    </Card>
+
+                    {/* Liabilities Bento */}
+                    <Card className="flex flex-col border-white/5 p-6 h-full">
+                      <div className="flex items-center justify-between mb-8">
+                        <div className="flex items-center gap-4">
+                          <div className="p-3 bg-rose-500/10 rounded-xl text-rose-400">
+                            <CreditCard size={24} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-display font-bold tracking-tight">Liabilities</h3>
+                            <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding Debt</p>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
+                          variant="secondary"
+                          className="p-2 rounded-xl"
+                        >
+                          <Plus size={18} />
+                        </Button>
+                      </div>
+
+                      <div className="flex-1 space-y-4 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                        {liabilities.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-white/10">
+                            <CreditCard size={48} className="mb-4 opacity-10" />
+                            <p className="text-sm font-medium">No liabilities</p>
+                          </div>
+                        ) : (
+                          liabilities.map(debt => (
+                            <motion.div 
+                              key={debt.id}
+                              whileHover={{ x: 4 }}
+                              className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-rose-500/30 transition-all"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{debt.name}</p>
+                                <p className="text-base font-display font-bold text-rose-400 truncate">{formatCurrency(debt.amount)}</p>
+                              </div>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
+                                <button 
+                                  onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
+                                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button 
+                                  onClick={() => deleteItem('liabilities', debt.id)}
+                                  className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          ))
+                        )}
+                      </div>
+                      
+                      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+                        <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Debt</span>
+                        <span className="text-lg font-display font-bold text-rose-400">{formatCurrency(totalDebt)}</span>
+                      </div>
+                    </Card>
+                  </div>
+                </div>
+              </section>
+            </div>
+          ) : activeTab === 'transactions' ? (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-display font-bold tracking-tight">Transaction History</h1>
+                <p className="text-white/40 text-sm font-medium">Your complete financial ledger.</p>
               </div>
-              
-              <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Liquidity</span>
-                <span className="text-lg font-display font-bold text-emerald-400">{formatCurrency(totalCash)}</span>
+              <section className="glass-dark rounded-[2rem] p-4 border border-white/5 relative overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/5 rounded-lg text-white/60">
+                      <History size={18} />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-display font-bold tracking-tight">Recent Transactions</h3>
+                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Complete Ledger</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto -mx-4 px-4">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-white/5">
+                        <th className="pb-2 text-[10px] font-bold uppercase tracking-widest text-white/20">Date</th>
+                        <th className="pb-2 text-[10px] font-bold uppercase tracking-widest text-white/20">Type</th>
+                        <th className="pb-2 text-[10px] font-bold uppercase tracking-widest text-white/20">Account</th>
+                        <th className="pb-2 text-[10px] font-bold uppercase tracking-widest text-white/20">Amount</th>
+                        <th className="pb-2 text-[10px] font-bold uppercase tracking-widest text-white/20">Notes</th>
+                        <th className="pb-2 text-right text-[10px] font-bold uppercase tracking-widest text-white/20">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {transactions.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-12 text-center text-white/10">
+                            <div className="flex flex-col items-center">
+                              <History size={48} className="mb-4 opacity-10" />
+                              <p className="text-sm font-medium">No transactions found</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        transactions.map(t => (
+                          <motion.tr 
+                            key={t.id}
+                            whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
+                            className="group transition-colors"
+                          >
+                            <td className="py-2 text-xs text-white/60 font-mono">
+                              {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </td>
+                            <td className="py-2">
+                              <span className={cn(
+                                "px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest",
+                                t.type === 'income' ? "bg-emerald-500/10 text-emerald-400" :
+                                t.type === 'expense' ? "bg-rose-500/10 text-rose-400" :
+                                t.type === 'investment_deposit' ? "bg-indigo-500/10 text-indigo-400" :
+                                t.type === 'investment_withdrawal' ? "bg-amber-500/10 text-amber-400" :
+                                t.type === 'debt_payment' ? "bg-sky-500/10 text-sky-400" :
+                                t.type === 'debt_expense' ? "bg-rose-500/10 text-rose-400" :
+                                "bg-white/5 text-white/40"
+                              )}>
+                                {t.type.replace('_', ' ')}
+                              </span>
+                            </td>
+                            <td className="py-2">
+                              <span className="text-xs font-bold tracking-tight">
+                                {accounts.find(a => a.id === t.accountId)?.name || 
+                                 investments.find(i => i.id === t.accountId)?.name || 
+                                 liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
+                              </span>
+                            </td>
+                            <td className={cn(
+                              "py-2 font-display font-bold text-sm",
+                              t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? "text-emerald-400" : "text-rose-400"
+                            )}>
+                              {t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? '+' : '-'}{formatCurrency(t.amount)}
+                            </td>
+                            <td className="py-2">
+                              <p className="text-[10px] text-white/40 max-w-[150px] truncate">{t.notes || '-'}</p>
+                            </td>
+                            <td className="py-2 text-right">
+                              <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button 
+                                  onClick={() => { setEditingItem(t); setSelectedTransactionType(t.type); setSelectedAccountId(t.accountId); setIsTransactionModalOpen(true); }}
+                                  className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-luxury-accent transition-colors"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button 
+                                  onClick={() => deleteTransaction(t)}
+                                  className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </td>
+                          </motion.tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          ) : (
+            <div className="space-y-6">
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4">
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-1"
+              >
+                <h1 className="text-xl md:text-2xl font-display font-bold tracking-tight">
+                  Welcome back, <span className="text-luxury-accent">{userDisplayName.split(' ')[0]}</span>
+                </h1>
+                <p className="text-white/40 text-xs font-medium">Here's your financial overview for today.</p>
+              </motion.div>
+            </div>
+
+          {/* Stats Grid */}
+          <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <Card className="relative overflow-hidden group border-white/5 p-4">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-luxury-accent/10 rounded-full blur-2xl group-hover:bg-luxury-accent/20 transition-all duration-500" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-luxury-accent/10 rounded-lg text-luxury-accent">
+                    <PieChartIcon size={16} />
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/40">Net Cash</span>
+                </div>
+                <h3 className={cn("text-lg font-display font-bold mb-0.5 tracking-tight", netCash >= 0 ? "text-luxury-accent" : "text-rose-400")}>
+                  {formatCurrency(netCash)}
+                </h3>
+                <p className="text-[9px] text-white/20 font-medium">Cash - Debt</p>
               </div>
             </Card>
 
-            {/* Investments & Liabilities Column */}
-            <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Investments Bento */}
-              <Card className="flex flex-col border-white/5 p-8 h-full">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-indigo-500/10 rounded-xl text-indigo-400">
-                      <TrendingUp size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-display font-bold tracking-tight">Growth</h3>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Investments</p>
-                    </div>
+            <Card className="relative overflow-hidden group bg-luxury-accent border-none text-black p-4">
+              <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/20 rounded-full blur-2xl group-hover:bg-white/30 transition-all duration-500" />
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-black/10 rounded-lg text-black">
+                    <TrendingUp size={16} />
                   </div>
-                  <Button 
-                    onClick={() => { setEditingItem(null); setIsInvestmentModalOpen(true); }} 
-                    variant="secondary"
-                    className="p-2 rounded-xl"
-                  >
-                    <Plus size={18} />
-                  </Button>
+                  <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-black/40">Net Worth</span>
                 </div>
-
-                <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {investments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                      <TrendingUp size={48} className="mb-4 opacity-10" />
-                      <p className="text-sm font-medium">No investments</p>
-                    </div>
-                  ) : (
-                    investments.map(inv => (
-                      <motion.div 
-                        key={inv.id}
-                        whileHover={{ x: 4 }}
-                        className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-indigo-500/30 transition-all"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{inv.name}</p>
-                          <p className="text-base font-display font-bold text-white truncate">{formatCurrency(inv.value)}</p>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                          <button 
-                            onClick={() => { setEditingItem(inv); setIsInvestmentModalOpen(true); }}
-                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-indigo-400 transition-colors"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button 
-                            onClick={() => deleteItem('investments', inv.id)}
-                            className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-                
-                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Growth</span>
-                  <span className="text-lg font-display font-bold text-indigo-400">{formatCurrency(totalInvestments)}</span>
-                </div>
-              </Card>
-
-              {/* Liabilities Bento */}
-              <Card className="flex flex-col border-white/5 p-8 h-full">
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-rose-500/10 rounded-xl text-rose-400">
-                      <CreditCard size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-display font-bold tracking-tight">Liabilities</h3>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest">Outstanding Debt</p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => { setEditingItem(null); setIsLiabilityModalOpen(true); }} 
-                    variant="secondary"
-                    className="p-2 rounded-xl"
-                  >
-                    <Plus size={18} />
-                  </Button>
-                </div>
-
-                <div className="flex-1 space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                  {liabilities.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-white/10">
-                      <CreditCard size={48} className="mb-4 opacity-10" />
-                      <p className="text-sm font-medium">No liabilities</p>
-                    </div>
-                  ) : (
-                    liabilities.map(debt => (
-                      <motion.div 
-                        key={debt.id}
-                        whileHover={{ x: 4 }}
-                        className="group flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-rose-500/30 transition-all"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{debt.name}</p>
-                          <p className="text-base font-display font-bold text-rose-400 truncate">{formatCurrency(debt.amount)}</p>
-                        </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
-                          <button 
-                            onClick={() => { setEditingItem(debt); setIsLiabilityModalOpen(true); }}
-                            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                          >
-                            <Edit2 size={12} />
-                          </button>
-                          <button 
-                            onClick={() => deleteItem('liabilities', debt.id)}
-                            className="p-1.5 bg-white/5 hover:bg-red-500/20 rounded-lg text-white/40 hover:text-red-400 transition-colors"
-                          >
-                            <Trash2 size={12} />
-                          </button>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-                
-                <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
-                  <span className="text-xs font-bold text-white/20 uppercase tracking-widest">Total Debt</span>
-                  <span className="text-lg font-display font-bold text-rose-400">{formatCurrency(totalDebt)}</span>
-                </div>
-              </Card>
-            </div>
-          </div>
-        </section>
-
-        {/* Transactions History */}
-        <Card className="relative overflow-hidden border-white/5">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/5 rounded-lg text-white/60">
-                <History size={20} />
+                <h3 className="text-xl font-display font-bold mb-0.5 tracking-tight">{formatCurrency(netWorth)}</h3>
+                <p className="text-[9px] text-black/40 font-bold">Total Portfolio Value</p>
               </div>
-              <div>
-                <h3 className="text-lg font-display font-bold tracking-tight">Recent Transactions</h3>
-                <p className="text-[10px] text-white/40 uppercase tracking-widest">Complete Ledger</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Button 
-                onClick={() => { setIsTransactionModalOpen(true); setSelectedTransactionType('expense'); }} 
-                variant="primary" 
-                className="bg-white text-black hover:bg-gray-200 py-2 px-4 text-xs rounded-xl font-bold tracking-tight transition-all active:scale-95"
-              >
-                <Plus size={14} className="mr-2" /> New Transaction
-              </Button>
-            </div>
-          </div>
-          <div className="overflow-x-auto -mx-6 px-6">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-white/5">
-                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Date</th>
-                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Type</th>
-                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Account</th>
-                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Amount</th>
-                  <th className="pb-4 text-[10px] font-bold uppercase tracking-widest text-white/20">Notes</th>
-                  <th className="pb-4 text-right text-[10px] font-bold uppercase tracking-widest text-white/20">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/5">
-                {transactions.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-12 text-center text-white/10">
-                      <div className="flex flex-col items-center">
-                        <History size={48} className="mb-4 opacity-10" />
-                        <p className="text-sm font-medium">No transactions found</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  transactions.map(t => (
-                    <motion.tr 
-                      key={t.id}
-                      whileHover={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                      className="group transition-colors"
-                    >
-                      <td className="py-4 text-sm text-white/60 font-mono">
-                        {new Date(t.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </td>
-                      <td className="py-4">
-                        <span className={cn(
-                          "px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest",
-                          t.type === 'income' ? "bg-emerald-500/10 text-emerald-400" :
-                          t.type === 'expense' ? "bg-rose-500/10 text-rose-400" :
-                          t.type === 'investment_deposit' ? "bg-indigo-500/10 text-indigo-400" :
-                          t.type === 'investment_withdrawal' ? "bg-amber-500/10 text-amber-400" :
-                          t.type === 'debt_payment' ? "bg-sky-500/10 text-sky-400" :
-                          t.type === 'debt_expense' ? "bg-rose-500/10 text-rose-400" :
-                          "bg-white/5 text-white/40"
-                        )}>
-                          {t.type.replace('_', ' ')}
-                        </span>
-                      </td>
-                      <td className="py-4">
-                        <span className="text-sm font-bold tracking-tight">
-                          {accounts.find(a => a.id === t.accountId)?.name || 
-                           investments.find(i => i.id === t.accountId)?.name || 
-                           liabilities.find(l => l.id === t.accountId)?.name || 'Unknown'}
-                        </span>
-                      </td>
-                      <td className={cn(
-                        "py-4 font-display font-bold",
-                        t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? "text-emerald-400" : "text-rose-400"
-                      )}>
-                        {t.type === 'income' || t.type === 'investment_withdrawal' || t.type === 'debt_expense' ? '+' : '-'}{formatCurrency(t.amount)}
-                      </td>
-                      <td className="py-4">
-                        <p className="text-xs text-white/40 max-w-[200px] truncate">{t.notes || '-'}</p>
-                      </td>
-                      <td className="py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                          <button 
-                            onClick={() => { 
-                              setEditingItem(t); 
-                              setSelectedTransactionType(t.type);
-                              setSelectedAccountId(t.accountId);
-                              setIsTransactionModalOpen(true); 
-                            }}
-                            className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => deleteTransaction(t)}
-                            className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {transactions.length === 0 && <p className="text-center text-white/10 py-12">No transactions yet</p>}
-        </Card>
+            </Card>
+          </section>
 
-        <div className="pt-16 border-t border-white/5 space-y-8">
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-              <div>
-                <h2 className="text-3xl font-display font-bold tracking-tight mb-2">Banking & E-Wallet</h2>
-                <p className="text-white/40 max-w-md">Securely manage your account numbers and digital wallet credentials for quick reference.</p>
-              </div>
-              <Button 
-                onClick={() => { setEditingItem(null); setIsInformationModalOpen(true); }}
-                className="bg-emerald-500 text-black hover:bg-emerald-400 py-3 px-6 rounded-2xl font-bold tracking-tight transition-all active:scale-95 flex items-center gap-2"
-              >
-                <Plus size={18} /> Add New Info
-              </Button>
+          {/* Small Info Grid */}
+          <section className="grid grid-cols-3 gap-3">
+            <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Assets</p>
+              <p className="text-xs font-display font-bold text-white">{formatCurrency(totalCash + totalInvestments)}</p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {information.length === 0 ? (
-                <div className="col-span-full py-20 flex flex-col items-center justify-center bg-white/5 rounded-[2rem] border border-dashed border-white/10">
-                  <div className="p-4 bg-white/5 rounded-full mb-4">
-                    <CreditCard size={32} className="text-white/20" />
-                  </div>
-                  <p className="text-white/40 font-medium">No banking information added yet</p>
-                </div>
-              ) : (
-                information.map((info) => (
-                  <motion.div
-                    key={info.id}
-                    layout
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    whileHover={{ y: -4 }}
-                    className={cn(
-                      "group relative p-6 bg-white/5 rounded-[2rem] border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer",
-                      selectedInfoId === info.id && "border-emerald-500/50 bg-emerald-500/5 shadow-[0_0_30px_rgba(16,185,129,0.1)]"
-                    )}
-                    onClick={() => setSelectedInfoId(selectedInfoId === info.id ? null : info.id)}
-                  >
-                    <div className="flex items-start justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "p-3 rounded-2xl text-white/60 group-hover:text-emerald-400 transition-colors",
-                          info.type === 'bank' ? "bg-blue-500/10" : 
-                          info.type === 'ewallet' ? "bg-emerald-500/10" :
-                          info.type === 'crypto' ? "bg-orange-500/10" :
-                          "bg-purple-500/10"
-                        )}>
-                          {info.type === 'bank' ? <Wallet size={24} /> : 
-                           info.type === 'ewallet' ? <CreditCard size={24} /> :
-                           info.type === 'crypto' ? <TrendingUp size={24} /> :
-                           <LayoutDashboard size={24} />}
-                        </div>
-                        <div>
-                          <h3 className="font-bold tracking-tight">{info.provider}</h3>
-                          <p className="text-[10px] text-white/40 uppercase tracking-widest">{info.type}</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); setEditingItem(info); setIsInformationModalOpen(true); }}
-                          className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/40 hover:text-emerald-400 transition-colors"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                        <button 
-                          onClick={(e) => { e.stopPropagation(); deleteItem('information', info.id); }}
-                          className="p-2 bg-white/5 hover:bg-rose-500/20 rounded-lg text-white/40 hover:text-rose-400 transition-colors"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="p-4 bg-black/20 rounded-2xl border border-white/5">
-                        <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Number / Phone</p>
-                        <div className="flex items-center justify-between">
-                          <p className="text-lg font-mono font-medium tracking-wider text-white/80">
-                            {selectedInfoId === info.id ? info.accountNumber : info.accountNumber.replace(/.(?=.{4})/g, '•')}
-                          </p>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); copyToClipboard(info.accountNumber); }}
-                            className="p-2 hover:bg-white/5 rounded-lg text-white/20 hover:text-emerald-400 transition-colors"
-                          >
-                            <Copy size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      {info.accountName && (
-                        <div>
-                          <p className="text-[10px] text-white/20 uppercase tracking-widest mb-1">Account Name</p>
-                          <p className="font-bold tracking-tight text-white/60 uppercase">{info.accountName}</p>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                ))
-              )}
+            <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Investment</p>
+              <p className="text-xs font-display font-bold text-indigo-400">{formatCurrency(totalInvestments)}</p>
             </div>
-          </div>
+            <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Debt</p>
+              <p className="text-xs font-display font-bold text-rose-400">{formatCurrency(totalDebt)}</p>
+            </div>
+          </section>
         </div>
       )}
     </main>
+
+    <BottomNav 
+      activeTab={activeTab} 
+      setActiveTab={setActiveTab} 
+      onPlusClick={() => {
+        setEditingItem(null);
+        setSelectedTransactionType('expense');
+        setIsTransactionModalOpen(true);
+      }} 
+    />
 
       {/* Modals */}
       <Modal 
