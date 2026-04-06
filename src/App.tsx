@@ -1089,7 +1089,7 @@ export default function App() {
                       required
                     />
                   </div>
-                  <Button disabled={authLoading} className="w-full py-4 text-lg">
+                  <Button type="submit" disabled={authLoading} className="w-full py-4 text-lg">
                     {authLoading ? <RefreshCcw className="animate-spin w-5 h-5" /> : "Send Reset Link"}
                   </Button>
                   <button
@@ -1157,7 +1157,7 @@ export default function App() {
                     </div>
                   )}
 
-                  <Button disabled={authLoading} className="w-full py-4 text-lg">
+                  <Button type="submit" disabled={authLoading} className="w-full py-4 text-lg">
                     {authLoading ? <RefreshCcw className="animate-spin w-5 h-5" /> : (isLoginMode ? "Sign In" : "Create Account")}
                   </Button>
 
