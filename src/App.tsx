@@ -1824,8 +1824,8 @@ export default function App() {
           {/* Small Info Grid */}
           <section className="grid grid-cols-3 gap-3">
             <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
-              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Assets</p>
-              <p className="text-xs font-display font-bold text-white">{formatCurrency(totalCash + totalInvestments)}</p>
+              <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Liquid Asset</p>
+              <p className="text-xs font-display font-bold text-white">{formatCurrency(totalCash)}</p>
             </div>
             <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
               <p className="text-[8px] font-bold uppercase tracking-widest text-white/20 mb-1">Investment</p>
