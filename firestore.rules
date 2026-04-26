@@ -61,7 +61,8 @@ service cloud.firestore {
     function isValidLiability(data) {
       return data.get('userId', '') == request.auth.uid &&
              data.get('name', '') is string && data.get('name', '').size() > 0 &&
-             data.get('amount', 0) is number;
+             data.get('amount', 0) is number &&
+             (data.get('dueDate', '') == '' || data.get('dueDate', '') is string);
     }
 
     function isValidTransaction(data) {

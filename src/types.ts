@@ -21,6 +21,7 @@ export interface Liability {
   userId: string;
   name: string;
   amount: number;
+  dueDate?: string; // Optional due date
   updatedAt: string;
 }
 

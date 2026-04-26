@@ -15,9 +15,13 @@ export function formatCurrency(amount: number) {
 }
 
 export function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('id-ID', {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString;
+  
+  return date.toLocaleDateString('en-GB', {
     day: 'numeric',
-    month: 'short',
+    month: 'long',
     year: 'numeric',
   });
 }

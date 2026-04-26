@@ -19,7 +19,7 @@ import {
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { db, auth, signInWithGoogle, signInWithApple, logout, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, updateProfile, updateEmail, updatePassword } from './firebase';
 import { Account, Investment, Liability, Transaction, UserProfile, Information } from './types';
-import { formatCurrency, cn } from './utils';
+import { formatCurrency, cn, formatDate } from './utils';
 import { 
   Wallet, 
   TrendingUp, 
@@ -44,7 +44,8 @@ import {
   Lock,
   User as UserIcon,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Calendar
 } from 'lucide-react';
 import { 
   PieChart, 
@@ -652,16 +653,23 @@ export default function App() {
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const amount = Number(formData.get('amount'));
+    const dueDate = formData.get('dueDate') as string;
 
     try {
       if (editingItem) {
-        await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { name, amount, updatedAt: new Date().toISOString() });
+        await updateDoc(doc(db, `users/${user.uid}/liabilities`, editingItem.id), { 
+          name, 
+          amount, 
+          dueDate,
+          updatedAt: new Date().toISOString() 
+        });
         setNotification({ message: 'Liability updated successfully', type: 'success' });
       } else {
         await addDoc(collection(db, `users/${user.uid}/liabilities`), {
           userId: user.uid,
           name,
           amount,
+          dueDate,
           updatedAt: new Date().toISOString()
         });
         setNotification({ message: 'Liability added successfully', type: 'success' });
@@ -1639,6 +1647,12 @@ export default function App() {
                               <div className="flex-1 min-w-0">
                                 <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mb-0.5 truncate">{debt.name}</p>
                                 <p className="text-base font-display font-bold text-rose-400 truncate">{formatCurrency(debt.amount)}</p>
+                                {debt.dueDate && (
+                                  <div className="flex items-center gap-1.5 mt-1.5 p-1.5 bg-white/5 rounded-lg w-fit">
+                                    <Calendar size={10} className="text-rose-400/60" />
+                                    <span className="text-[9px] font-bold text-white/40 uppercase tracking-wider">Due: {formatDate(debt.dueDate)}</span>
+                                  </div>
+                                )}
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-2">
                                 <button 
@@ -1964,6 +1978,15 @@ export default function App() {
                 required 
                 placeholder="0"
                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-white/20 uppercase tracking-[0.2em] mb-2">Due Date (Optional)</label>
+              <input 
+                name="dueDate" 
+                type="date" 
+                defaultValue={editingItem?.dueDate}
+                className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white placeholder:text-white/10 focus:outline-none focus:border-emerald-500/50 transition-all [color-scheme:dark]"
               />
             </div>
           </div>

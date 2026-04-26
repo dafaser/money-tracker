@@ -49,6 +49,7 @@
         "userId": { "type": "string" },
         "name": { "type": "string" },
         "amount": { "type": "number" },
+        "dueDate": { "type": "string", "format": "date", "description": "Optional due date for the debt" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "name", "amount"]
