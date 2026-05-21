@@ -1,43 +1,106 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Outfit", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-cute: "Comic Neue", cursive;
 
-  --color-luxury-bg: #050505;
-  --color-luxury-card: #0c0c0c;
-  --color-luxury-accent: #00e5c2;
+  --color-luxury-bg: #0b0d19; /* Cool deep dark slate/indigo */
+  --color-luxury-card: #15182e; /* Fun dark purple slate card */
+  --color-luxury-accent: #00ffcc; /* Bright neon cyber mint */
   --color-luxury-border: rgba(255, 255, 255, 0.08);
 }
 
 @layer base {
   body {
-    @apply bg-luxury-bg text-white font-sans antialiased;
+    @apply bg-luxury-bg text-white font-sans antialiased selection:bg-purple-500/30 selection:text-white;
   }
 }
 
-.glass {
-  @apply bg-white/5 backdrop-blur-xl border border-white/10;
+/* tactile clicky 3D button */
+.btn-3d-mint {
+  @apply relative bg-[#00ffcc] text-black font-bold border-2 border-black border-b-[6px] border-r-[4px] rounded-2xl active:border-b-2 active:border-r-2 active:translate-y-[4px] active:translate-x-[2px] transition-all hover:brightness-105 duration-100 cursor-pointer;
 }
 
-.glass-dark {
-  @apply bg-black/40 backdrop-blur-2xl border border-white/5;
+.btn-3d-purple {
+  @apply relative bg-gradient-to-br from-[#8a2be2] to-[#6a0dad] text-white font-bold border-2 border-black border-b-[6px] border-r-[4px] rounded-2xl active:border-b-2 active:border-r-2 active:translate-y-[4px] active:translate-x-[2px] transition-all hover:brightness-110 duration-100 cursor-pointer shadow-lg shadow-[#8a2be2]/20;
+}
+
+.btn-3d-rose {
+  @apply relative bg-gradient-to-br from-[#ff007f] to-[#e0115f] text-white font-bold border-2 border-black border-b-[6px] border-r-[4px] rounded-2xl active:border-b-2 active:border-r-2 active:translate-y-[4px] active:translate-x-[2px] transition-all hover:brightness-110 duration-100 cursor-pointer shadow-lg shadow-[#ff007f]/20;
+}
+
+.btn-3d-slate {
+  @apply relative bg-[#2a2d4a] text-white font-semibold border-2 border-black border-b-[4px] border-r-[3px] rounded-2xl active:border-b-2 active:border-r-2 active:translate-y-[2px] active:translate-x-[1px] transition-all hover:bg-[#34385c] duration-100 cursor-pointer;
+}
+
+/* 3D Bubble Toy Card style */
+.card-3d {
+  @apply bg-gradient-to-br from-[#1b1e3e] to-[#12142a] border-2 border-black border-b-[8px] border-r-[8px] rounded-[2.5rem] p-6 shadow-2xl relative overflow-hidden transition-all duration-300;
+}
+
+.card-3d:hover {
+  @apply border-b-[10px] border-r-[10px] -translate-y-1 -translate-x-0.5;
+}
+
+/* Glassy clay style for 3D floaters */
+.glass-clay {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    inset 0 4px 10px rgba(255, 255, 255, 0.05),
+    inset 0 -4px 10px rgba(0, 0, 0, 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
-    width: 4px;
+    width: 6px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(138, 43, 226, 0.2);
     border-radius: 10px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(0, 255, 204, 0.3);
   }
 }
+
+/* Cute float keyframe classes */
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
+}
+
+@keyframes float-opposite {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(15px) rotate(-3deg); }
+}
+
+@keyframes spin-slow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-float-cute {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-cute-fast {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-float-cute-opposite {
+  animation: float-opposite 7s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+
